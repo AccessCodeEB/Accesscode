@@ -1,0 +1,33 @@
+{
+  "name": "espinabifida",
+  "version": "1.0.0",
+  "description": "a01541324 a00839182 a01286259 a01383804 a00840653",
+  "main": "index.js",
+  "type": "module",
+"scripts": {
+  "dev": "nodemon src/server.js",
+  "start": "node src/server.js",
+  "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AccessCodeEB/EspinaBifida.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AccessCodeEB/EspinaBifida/issues"
+  },
+  "homepage": "https://github.com/AccessCodeEB/EspinaBifida#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.1",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.2.2"
+  }
+}
