@@ -2,8 +2,10 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
+// Importar rutas para carpeta de modulos
 import { errorHandler } from "./middleware/errorHandler.js";
 import beneficiariosRoutes from "./modules/beneficiarios/beneficiarios.routes.js";
+import serviciosRoutes from "./modules/servicios/servicios.routes.js";
 
 dotenv.config();
 
@@ -17,6 +19,7 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/beneficiarios", beneficiariosRoutes);
+app.use("/servicios", serviciosRoutes);
 
 app.use(errorHandler);
 
