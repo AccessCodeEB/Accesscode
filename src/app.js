@@ -7,6 +7,7 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import beneficiariosRoutes from "./modules/beneficiarios/beneficiarios.routes.js";
 import serviciosRoutes from "./modules/servicios/servicios.routes.js";
 import articulosRoutes from "./modules/inventario/articulos.routes.js";
+import citasRoutes from "./modules/citas/citas.routes.js";
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.get("/health", (req, res) => {
 app.use("/beneficiarios", beneficiariosRoutes);
 app.use("/servicios", serviciosRoutes);
 app.use("/articulos", articulosRoutes);
+app.use("/citas", citasRoutes);
 
 app.use(errorHandler);
 
