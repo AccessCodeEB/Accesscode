@@ -40,6 +40,23 @@ export async function findLastByCurp(curp) {
   }
 }
 
+export async function cancelarPorCurp(curp) {
+  const conn = await getConnection();
+  try {
+    await conn.execute(
+      `UPDATE CREDENCIALES
+       SET FECHA_VIGENCIA_FIN = TRUNC(SYSDATE),
+           OBSERVACIONES = 'Cancelada por baja de beneficiario'
+       WHERE CURP = :curp
+         AND (FECHA_VIGENCIA_FIN IS NULL OR FECHA_VIGENCIA_FIN > TRUNC(SYSDATE))`,
+      { curp },
+      { autoCommit: true }
+    );
+  } finally {
+    await conn.close();
+  }
+}
+
 export async function create({
   curp,
   numeroCredencial,

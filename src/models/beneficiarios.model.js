@@ -4,9 +4,9 @@ export async function findAll() {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `SELECT NUMERO_CREDENCIAL, NOMBRES, APELLIDO_PATERNO, APELLIDO_MATERNO,
+      `SELECT NOMBRES, APELLIDO_PATERNO, APELLIDO_MATERNO,
               CURP, GENERO, FECHA_NACIMIENTO, TIPO_SANGRE,
-              TELEFONO_CELULAR, CORREO_ELECTRONICO, ACTIVO
+              TELEFONO_CELULAR, CORREO_ELECTRONICO, ESTATUS
        FROM BENEFICIARIOS
        ORDER BY APELLIDO_PATERNO`
     );
@@ -16,12 +16,12 @@ export async function findAll() {
   }
 }
 
-export async function findById(id) {
+export async function findById(curp) {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `SELECT * FROM BENEFICIARIOS WHERE NUMERO_CREDENCIAL = :id`,
-      { id }
+      `SELECT * FROM BENEFICIARIOS WHERE CURP = :curp`,
+      { curp }
     );
     return result.rows[0] ?? null;
   } finally {
@@ -40,7 +40,7 @@ export async function create(data) {
          TELEFONO_CASA, TELEFONO_CELULAR, CORREO_ELECTRONICO,
          CONTACTO_EMERGENCIA, TELEFONO_EMERGENCIA,
          MUNICIPIO_NACIMIENTO, HOSPITAL_NACIMIENTO,
-         TIPO_SANGRE, USA_VALVULA, NOTAS
+         TIPO_SANGRE, USA_VALVULA, NOTAS, ESTATUS
        ) VALUES (
          :nombres, :apellidoPaterno, :apellidoMaterno, :curp,
          TO_DATE(:fechaNacimiento, 'YYYY-MM-DD'), :genero, :nombrePadreMadre,
@@ -48,7 +48,7 @@ export async function create(data) {
          :telefonoCasa, :telefonoCelular, :correoElectronico,
          :contactoEmergencia, :telefonoEmergencia,
          :municipioNacimiento, :hospitalNacimiento,
-         :tipoSangre, :usaValvula, :notas
+         :tipoSangre, :usaValvula, :notas, :estatus
        )`,
       data,
       { autoCommit: true }
@@ -58,7 +58,7 @@ export async function create(data) {
   }
 }
 
-export async function update(id, data) {
+export async function update(curp, data) {
   const conn = await getConnection();
   try {
     await conn.execute(
@@ -66,7 +66,6 @@ export async function update(id, data) {
          NOMBRES               = :nombres,
          APELLIDO_PATERNO      = :apellidoPaterno,
          APELLIDO_MATERNO      = :apellidoMaterno,
-         CURP                  = :curp,
          FECHA_NACIMIENTO      = TO_DATE(:fechaNacimiento, 'YYYY-MM-DD'),
          GENERO                = :genero,
          NOMBRE_PADRE_MADRE    = :nombrePadreMadre,
@@ -85,9 +84,10 @@ export async function update(id, data) {
          HOSPITAL_NACIMIENTO   = :hospitalNacimiento,
          TIPO_SANGRE           = :tipoSangre,
          USA_VALVULA           = :usaValvula,
-         NOTAS                 = :notas
-       WHERE NUMERO_CREDENCIAL = :id`,
-      { ...data, id },
+         NOTAS                 = :notas,
+         ESTATUS               = :estatus
+       WHERE CURP = :curp`,
+      { ...data, curp },
       { autoCommit: true }
     );
   } finally {
@@ -95,12 +95,12 @@ export async function update(id, data) {
   }
 }
 
-export async function deactivate(id) {
+export async function deactivate(curp) {
   const conn = await getConnection();
   try {
     await conn.execute(
-      `UPDATE BENEFICIARIOS SET ACTIVO = 0 WHERE NUMERO_CREDENCIAL = :id`,
-      { id },
+      `UPDATE BENEFICIARIOS SET ESTATUS = 'Baja' WHERE CURP = :curp`,
+      { curp },
       { autoCommit: true }
     );
   } finally {

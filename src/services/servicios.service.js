@@ -1,22 +1,23 @@
 import * as ServiciosModel from "../models/servicios.model.js";
 
 // Validar beneficiario activo y crear servicio
+const ESTATUS_BLOQUEADOS = ["Inactivo", "Baja"];
+
 export async function createConValidacion(data) {
-  // Validar que el beneficiario existe y está activo
   const beneficiario = await ServiciosModel.findBeneficiarioActivo(data.curp);
-  
+
   if (!beneficiario) {
     throw new Error("Beneficiario no encontrado");
   }
 
-  if (!beneficiario.ACTIVO) {
-    throw new Error("Beneficiario inactivo. No se puede asignar servicio");
+  if (ESTATUS_BLOQUEADOS.includes(beneficiario.ESTATUS)) {
+    throw new Error(
+      `No se puede asignar un servicio a un beneficiario con estatus '${beneficiario.ESTATUS}'`
+    );
   }
 
-  // Crear el servicio
   await ServiciosModel.create(data);
 
-  // Registrar en historial
   await ServiciosModel.insertHistorial({
     curp: data.curp,
     idServicio: data.idServicio || null,

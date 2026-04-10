@@ -4,9 +4,9 @@ import * as BeneficiarioController from "../controllers/beneficiarios.controller
 const router = Router();
 
 router.get("/",      BeneficiarioController.getAll);
-router.get("/:id",   BeneficiarioController.getById);
-router.post("/",     BeneficiarioController.create);
-router.put("/:id",   BeneficiarioController.update);
-router.delete("/:id", BeneficiarioController.deactivate);
+router.get("/:curp",   BeneficiarioController.getById);
+router.post("/",       BeneficiarioController.create);
+router.put("/:curp",   BeneficiarioController.update);
+router.delete("/:curp", BeneficiarioController.deactivate);
 
 export default router;

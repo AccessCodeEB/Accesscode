@@ -11,7 +11,7 @@ export async function getAll(req, res, next) {
 
 export async function getById(req, res, next) {
   try {
-    const data = await BeneficiarioService.getById(req.params.id);
+    const data = await BeneficiarioService.getById(req.params.curp);
     if (!data) return res.status(404).json({ error: "Beneficiario no encontrado" });
     res.json(data);
   } catch (err) {
@@ -30,7 +30,7 @@ export async function create(req, res, next) {
 
 export async function update(req, res, next) {
   try {
-    await BeneficiarioService.update(req.params.id, req.body);
+    await BeneficiarioService.update(req.params.curp, req.body);
     res.json({ message: "Beneficiario actualizado exitosamente" });
   } catch (err) {
     next(err);
@@ -39,7 +39,7 @@ export async function update(req, res, next) {
 
 export async function deactivate(req, res, next) {
   try {
-    await BeneficiarioService.deactivate(req.params.id);
+    await BeneficiarioService.deactivate(req.params.curp);
     res.json({ message: "Beneficiario desactivado exitosamente" });
   } catch (err) {
     next(err);

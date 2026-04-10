@@ -5,7 +5,7 @@ export async function findBeneficiarioActivo(curp) {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `SELECT ACTIVO, NUMERO_CREDENCIAL, NOMBRES, APELLIDO_PATERNO
+      `SELECT ESTATUS, NUMERO_CREDENCIAL, NOMBRES, APELLIDO_PATERNO
        FROM BENEFICIARIOS 
        WHERE CURP = :curp`,
       { curp }
