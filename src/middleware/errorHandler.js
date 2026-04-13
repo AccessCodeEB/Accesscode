@@ -1,16 +1,23 @@
-export class AppError extends Error {
-  constructor(message, statusCode) {
-    super(message);
-    this.statusCode = statusCode;
-  }
+import { isHttpError, mapOracleError, notFound } from "../utils/httpErrors.js";
+
+export function notFoundHandler(req, res, next) {
+  next(notFound(`Ruta no encontrada: ${req.method} ${req.originalUrl}`));
 }
 
 export function errorHandler(err, req, res, next) {
-  console.error(err);
+  const mappedError = isHttpError(err) ? err : mapOracleError(err);
 
-  if (err instanceof AppError) {
-    return res.status(err.statusCode).json({ error: err.message });
+  const statusCode = mappedError?.statusCode ?? 500;
+  const message = mappedError?.message ?? "Internal Server Error";
+
+  if (statusCode >= 500) {
+    console.error(err);
   }
 
-  res.status(500).json({ error: "Internal Server Error" });
+  const response = { error: message };
+  if (mappedError?.details) {
+    response.details = mappedError.details;
+  }
+
+  res.status(statusCode).json(response);
 }

@@ -61,7 +61,7 @@ export async function create(data) {
 export async function update(curp, data) {
   const conn = await getConnection();
   try {
-    await conn.execute(
+    const result = await conn.execute(
       `UPDATE BENEFICIARIOS SET
          NOMBRES               = :nombres,
          APELLIDO_PATERNO      = :apellidoPaterno,
@@ -90,6 +90,7 @@ export async function update(curp, data) {
       { ...data, curp },
       { autoCommit: true }
     );
+    return result.rowsAffected ?? 0;
   } finally {
     await conn.close();
   }
@@ -103,6 +104,7 @@ export async function deactivate(curp) {
       { curp },
       { autoCommit: true }
     );
+    return result.rowsAffected ?? 0;
   } finally {
     await conn.close();
   }

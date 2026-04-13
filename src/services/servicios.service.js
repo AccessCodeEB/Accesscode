@@ -1,4 +1,5 @@
 import * as ServiciosModel from "../models/servicios.model.js";
+import { conflict, notFound } from "../utils/httpErrors.js";
 
 // Validar beneficiario activo y crear servicio
 const ESTATUS_BLOQUEADOS = ["Inactivo", "Baja"];
@@ -7,7 +8,7 @@ export async function createConValidacion(data) {
   const beneficiario = await ServiciosModel.findBeneficiarioActivo(data.curp);
 
   if (!beneficiario) {
-    throw new Error("Beneficiario no encontrado");
+    throw notFound("Beneficiario no encontrado");
   }
 
   if (ESTATUS_BLOQUEADOS.includes(beneficiario.ESTATUS)) {

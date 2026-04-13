@@ -1,4 +1,5 @@
 import * as MembresiasModel from "../models/membresias.model.js";
+import { badRequest, notFound } from "../utils/httpErrors.js";
 
 function parseISODate(dateStr) {
   if (typeof dateStr !== "string") return null;
@@ -45,17 +46,17 @@ export async function registrarMembresia(data) {
     : "";
 
   if (!curp || !numeroCredencial || !fechaEmisionStr) {
-    throw new Error("curp, numero_credencial y fecha_emision son obligatorios");
+    throw badRequest("curp, numero_credencial y fecha_emision son obligatorios");
   }
 
   const beneficiario = await MembresiasModel.findBeneficiarioByCurp(curp);
   if (!beneficiario) {
-    throw new Error("Beneficiario no encontrado");
+    throw notFound("Beneficiario no encontrado");
   }
 
   const fechaEmision = parseISODate(fechaEmisionStr);
   if (!fechaEmision) {
-    throw new Error("fecha_emision debe tener formato YYYY-MM-DD");
+    throw badRequest("fecha_emision debe tener formato YYYY-MM-DD");
   }
 
   const fechaVigenciaInicio = parseISODate(
@@ -64,7 +65,7 @@ export async function registrarMembresia(data) {
       : fechaEmisionStr
   );
   if (!fechaVigenciaInicio) {
-    throw new Error("fecha_vigencia_inicio debe tener formato YYYY-MM-DD");
+    throw badRequest("fecha_vigencia_inicio debe tener formato YYYY-MM-DD");
   }
 
   const fechaVigenciaFin = addOneYearUTC(fechaEmision);
@@ -74,7 +75,7 @@ export async function registrarMembresia(data) {
     : null;
 
   if (data?.fecha_ultimo_pago && !fechaUltimoPago) {
-    throw new Error("fecha_ultimo_pago debe tener formato YYYY-MM-DD");
+    throw badRequest("fecha_ultimo_pago debe tener formato YYYY-MM-DD");
   }
 
   return await MembresiasModel.create({
@@ -91,7 +92,7 @@ export async function registrarMembresia(data) {
 export async function getEstatusMembresia(curpParam) {
   const curp = curpParam ? String(curpParam).trim().toUpperCase() : "";
   if (!curp) {
-    throw new Error("curp es obligatorio");
+    throw badRequest("curp es obligatorio");
   }
 
   const credencial = await MembresiasModel.findLastByCurp(curp);

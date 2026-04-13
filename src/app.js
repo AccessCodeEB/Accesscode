@@ -3,7 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 // Importar rutas para carpeta de modulos
-import { errorHandler } from "./middleware/errorHandler.js";
+import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import beneficiariosRoutes from "./routes/beneficiarios.routes.js";
 import serviciosRoutes from "./routes/servicios.routes.js";
 import articulosRoutes from "./routes/articulos.routes.js";
@@ -27,6 +27,7 @@ app.use("/articulos", articulosRoutes);
 app.use("/citas", citasRoutes);
 app.use("/membresias", membresiasRoutes);
 
+app.use(notFoundHandler);
 app.use(errorHandler);
 
 export default app;
