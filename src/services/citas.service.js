@@ -1,4 +1,5 @@
 import * as citasModel from "../models/citas.model.js";
+import { badRequest, notFound } from "../utils/httpErrors.js";
 
 const ESTATUS_VALIDOS = ["PROGRAMADA", "COMPLETADA", "CANCELADA"];
 
@@ -10,9 +11,7 @@ export const getCitaById = async (id) => {
   const cita = await citasModel.findById(id);
 
   if (!cita) {
-    const error = new Error("Cita no encontrada");
-    error.statusCode = 404;
-    throw error;
+    throw notFound("Cita no encontrada");
   }
 
   return cita;
@@ -22,15 +21,11 @@ export const createCita = async (data) => {
   const { curp, idTipoServicio, fecha, estatus } = data;
 
   if (!curp || !idTipoServicio || !fecha) {
-    const error = new Error("CURP, idTipoServicio y fecha son obligatorios");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("CURP, idTipoServicio y fecha son obligatorios");
   }
 
   if (estatus && !ESTATUS_VALIDOS.includes(estatus.toUpperCase())) {
-    const error = new Error("Estatus no válido");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Estatus no válido");
   }
 
   return await citasModel.create({
@@ -47,9 +42,7 @@ export const updateCita = async (id, data) => {
   const cita = await citasModel.findById(id);
 
   if (!cita) {
-    const error = new Error("Cita no encontrada");
-    error.statusCode = 404;
-    throw error;
+    throw notFound("Cita no encontrada");
   }
 
   const estatus = data.estatus
@@ -57,9 +50,7 @@ export const updateCita = async (id, data) => {
     : cita[5];
 
   if (estatus && !ESTATUS_VALIDOS.includes(estatus)) {
-    const error = new Error("Estatus no válido");
-    error.statusCode = 400;
-    throw error;
+    throw badRequest("Estatus no válido");
   }
 
   return await citasModel.update(id, {
@@ -76,9 +67,7 @@ export const deleteCita = async (id) => {
   const cita = await citasModel.findById(id);
 
   if (!cita) {
-    const error = new Error("Cita no encontrada");
-    error.statusCode = 404;
-    throw error;
+    throw notFound("Cita no encontrada");
   }
 
   return await citasModel.remove(id);

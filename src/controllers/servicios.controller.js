@@ -1,19 +1,18 @@
 import * as ServiciosService from "../services/servicios.service.js";
+import { badRequest, notFound } from "../utils/httpErrors.js";
 
 export async function getByCurp(req, res, next) {
   try {
     const { curp } = req.params;
     
     if (!curp) {
-      return res.status(400).json({ error: "CURP requerido" });
+      throw badRequest("CURP requerido");
     }
 
     const servicios = await ServiciosService.getByCurp(curp);
     
     if (!servicios || servicios.length === 0) {
-      return res.status(404).json({ 
-        message: "No hay servicios registrados para este beneficiario" 
-      });
+      throw notFound("No hay servicios registrados para este beneficiario");
     }
 
     res.json({
@@ -32,16 +31,12 @@ export async function create(req, res, next) {
 
     // Validar campos requeridos
     if (!curp || !idTipoServicio || costo === undefined) {
-      return res.status(400).json({ 
-        error: "CURP, idTipoServicio y costo son requeridos" 
-      });
+      throw badRequest("CURP, idTipoServicio y costo son requeridos");
     }
 
     // Validar que costo sea número positivo
     if (isNaN(costo) || costo < 0) {
-      return res.status(400).json({ 
-        error: "Costo debe ser un número positivo" 
-      });
+      throw badRequest("Costo debe ser un número positivo");
     }
 
     const resultado = await ServiciosService.createConValidacion({
@@ -56,9 +51,6 @@ export async function create(req, res, next) {
 
     res.status(201).json(resultado);
   } catch (err) {
-    if (err.message.includes("Beneficiario")) {
-      return res.status(400).json({ error: err.message });
-    }
     next(err);
   }
 }
@@ -68,13 +60,13 @@ export async function getById(req, res, next) {
     const { idServicio } = req.params;
 
     if (!idServicio) {
-      return res.status(400).json({ error: "ID de servicio requerido" });
+      throw badRequest("ID de servicio requerido");
     }
 
     const servicio = await ServiciosService.getById(idServicio);
 
     if (!servicio) {
-      return res.status(404).json({ error: "Servicio no encontrado" });
+      throw notFound("Servicio no encontrado");
     }
 
     res.json(servicio);
@@ -89,13 +81,13 @@ export async function update(req, res, next) {
     const { montoPagado, notas } = req.body;
 
     if (!idServicio) {
-      return res.status(400).json({ error: "ID de servicio requerido" });
+      throw badRequest("ID de servicio requerido");
     }
 
     // Validar que el servicio existe
     const servicio = await ServiciosService.getById(idServicio);
     if (!servicio) {
-      return res.status(404).json({ error: "Servicio no encontrado" });
+      throw notFound("Servicio no encontrado");
     }
 
     // Actualizar solo campos permitidos
@@ -115,13 +107,13 @@ export async function deleteById(req, res, next) {
     const { idServicio } = req.params;
 
     if (!idServicio) {
-      return res.status(400).json({ error: "ID de servicio requerido" });
+      throw badRequest("ID de servicio requerido");
     }
 
     // Validar que el servicio existe
     const servicio = await ServiciosService.getById(idServicio);
     if (!servicio) {
-      return res.status(404).json({ error: "Servicio no encontrado" });
+      throw notFound("Servicio no encontrado");
     }
 
     await ServiciosService.deleteById(idServicio);

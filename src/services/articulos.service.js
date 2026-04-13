@@ -1,5 +1,6 @@
 import * as ArticulosModel from "../models/articulos.model.js";
 import * as InventarioService from "./inventario.service.js";
+import { badRequest } from "../utils/httpErrors.js";
 
 function normalizeData(data = {}) {
   const normalized = {
@@ -14,14 +15,14 @@ function normalizeData(data = {}) {
   if (normalized.manejaInventario !== null && normalized.manejaInventario !== undefined) {
     normalized.manejaInventario = String(normalized.manejaInventario).trim().toUpperCase();
     if (!["S", "N"].includes(normalized.manejaInventario)) {
-      throw new Error("manejaInventario debe ser 'S' o 'N'");
+      throw badRequest("manejaInventario debe ser 'S' o 'N'");
     }
   }
 
   if (normalized.cuotaRecuperacion !== null && normalized.cuotaRecuperacion !== undefined) {
     const cuota = Number(normalized.cuotaRecuperacion);
     if (Number.isNaN(cuota) || cuota < 0) {
-      throw new Error("cuotaRecuperacion debe ser un numero mayor o igual a 0");
+      throw badRequest("cuotaRecuperacion debe ser un numero mayor o igual a 0");
     }
     normalized.cuotaRecuperacion = cuota;
   }
@@ -29,7 +30,7 @@ function normalizeData(data = {}) {
   if (normalized.inventarioActual !== null && normalized.inventarioActual !== undefined) {
     const inventario = Number(normalized.inventarioActual);
     if (Number.isNaN(inventario) || inventario < 0) {
-      throw new Error("inventarioActual debe ser un numero mayor o igual a 0");
+      throw badRequest("inventarioActual debe ser un numero mayor o igual a 0");
     }
     normalized.inventarioActual = inventario;
   }
@@ -37,7 +38,7 @@ function normalizeData(data = {}) {
   if (normalized.idCategoria !== null && normalized.idCategoria !== undefined) {
     const categoria = Number(normalized.idCategoria);
     if (Number.isNaN(categoria)) {
-      throw new Error("idCategoria debe ser numerico");
+      throw badRequest("idCategoria debe ser numerico");
     }
     normalized.idCategoria = categoria;
   }

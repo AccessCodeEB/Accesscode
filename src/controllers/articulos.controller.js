@@ -24,9 +24,6 @@ export async function create(req, res, next) {
     await ArticulosService.create(req.body);
     res.status(201).json({ message: "Articulo creado exitosamente" });
   } catch (err) {
-    if (err.message.includes("manejaInventario") || err.message.includes("cuotaRecuperacion") || err.message.includes("inventarioActual") || err.message.includes("idCategoria")) {
-      return res.status(400).json({ error: err.message });
-    }
     next(err);
   }
 }
@@ -39,9 +36,6 @@ export async function update(req, res, next) {
     await ArticulosService.update(req.params.id, req.body);
     res.json({ message: "Articulo actualizado exitosamente" });
   } catch (err) {
-    if (err.message.includes("manejaInventario") || err.message.includes("cuotaRecuperacion") || err.message.includes("inventarioActual") || err.message.includes("idCategoria")) {
-      return res.status(400).json({ error: err.message });
-    }
     next(err);
   }
 }
