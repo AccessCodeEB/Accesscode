@@ -36,10 +36,10 @@ export async function create(data) {
   try {
     await conn.execute(
       `INSERT INTO ARTICULOS (
-         DESCRIPCION, UNIDAD, CUOTA_RECUPERACION,
+         ID_ARTICULO, DESCRIPCION, UNIDAD, CUOTA_RECUPERACION,
          INVENTARIO_ACTUAL, MANEJA_INVENTARIO, ID_CATEGORIA
        ) VALUES (
-         :descripcion, :unidad, :cuotaRecuperacion,
+         :idArticulo, :descripcion, :unidad, :cuotaRecuperacion,
          :inventarioActual, :manejaInventario, :idCategoria
        )`,
       data,

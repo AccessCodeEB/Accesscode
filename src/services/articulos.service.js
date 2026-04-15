@@ -4,6 +4,7 @@ import { badRequest } from "../utils/httpErrors.js";
 
 function normalizeData(data = {}) {
   const normalized = {
+    idArticulo: data.idArticulo ?? null,
     descripcion: data.descripcion ?? null,
     unidad: data.unidad ?? null,
     cuotaRecuperacion: data.cuotaRecuperacion ?? null,
@@ -43,6 +44,14 @@ function normalizeData(data = {}) {
     normalized.idCategoria = categoria;
   }
 
+  if (normalized.idArticulo !== null && normalized.idArticulo !== undefined) {
+    const idArticulo = Number(normalized.idArticulo);
+    if (Number.isNaN(idArticulo)) {
+      throw badRequest("idArticulo debe ser numerico");
+    }
+    normalized.idArticulo = idArticulo;
+  }
+
   return normalized;
 }
 
@@ -52,8 +61,15 @@ export const getAll = () =>
 export const getById = (id) =>
   ArticulosModel.findById(id);
 
-export const create = (data) =>
-  ArticulosModel.create(normalizeData(data));
+export const create = (data) => {
+  const normalized = normalizeData(data);
+
+  if (normalized.idArticulo === null || normalized.idArticulo === undefined) {
+    throw badRequest("idArticulo es obligatorio");
+  }
+
+  return ArticulosModel.create(normalized);
+};
 
 export const update = (id, data) =>
   ArticulosModel.update(id, normalizeData(data));

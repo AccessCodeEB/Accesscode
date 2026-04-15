@@ -7,7 +7,11 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "import:articulos:dry": "node scripts/import-articulos-from-xls.js articulos.xls",
+    "import:articulos": "node scripts/import-articulos-from-xls.js articulos.xls --apply",
+    "import:articulos:dry:fixneg": "node scripts/import-articulos-from-xls.js articulos.xls --fix-negative-inventory",
+    "import:articulos:fixneg": "node scripts/import-articulos-from-xls.js articulos.xls --fix-negative-inventory --apply"
   },
   "repository": {
     "type": "git",
@@ -26,7 +30,8 @@
     "dotenv": "^17.4.1",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "oracledb": "^6.10.0"
+    "oracledb": "^6.10.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "jest": "^29.7.0",
