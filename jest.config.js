@@ -1,3 +1,24 @@
 export default {
-  testEnvironment: "node"
+  testEnvironment: "node",
+
+  // Archivos fuente sobre los que se mide cobertura
+  collectCoverageFrom: [
+    "src/**/*.js",
+    "!src/server.js",          // entrypoint — no tiene lógica testeable
+    "!src/config/db.js",       // infraestructura Oracle — siempre mockeada
+    "!src/config/database.js", // idem
+    "!src/tests/**",           // los tests mismos no se miden
+  ],
+
+  coverageDirectory: "coverage",
+
+  coverageReporters: ["text", "lcov", "html"],
+
+  // Falla el run si no se alcanzan los umbrales
+  coverageThreshold: {
+    global: {
+      lines:    70,
+      branches: 70,
+    },
+  },
 };
