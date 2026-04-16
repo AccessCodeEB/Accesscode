@@ -1,6 +1,14 @@
 import * as ServiciosService from "../services/servicios.service.js";
 import { badRequest, notFound } from "../utils/httpErrors.js";
 
+function parseIdServicio(value) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw badRequest("idServicio debe ser entero positivo");
+  }
+  return parsed;
+}
+
 export async function getByCurp(req, res, next) {
   try {
     const { curp } = req.params;
@@ -25,6 +33,22 @@ export async function getByCurp(req, res, next) {
   }
 }
 
+export async function getDetailed(req, res, next) {
+  try {
+    const result = await ServiciosService.getDetailed(req.query ?? {});
+
+    res.json({
+      page: result.page,
+      limit: result.limit,
+      total: result.total,
+      totalPages: Math.ceil(result.total / result.limit),
+      data: result.data,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function create(req, res, next) {
   try {
     const { curp, idTipoServicio, costo, montoPagado, referenciaId, referenciaTipo, notas } = req.body;
@@ -34,16 +58,11 @@ export async function create(req, res, next) {
       throw badRequest("CURP, idTipoServicio y costo son requeridos");
     }
 
-    // Validar que costo sea número positivo
-    if (isNaN(costo) || costo < 0) {
-      throw badRequest("Costo debe ser un número positivo");
-    }
-
     const resultado = await ServiciosService.createConValidacion({
       curp,
       idTipoServicio,
       costo,
-      montoPagado: montoPagado || 0,
+      montoPagado: montoPagado ?? 0,
       referenciaId: referenciaId || null,
       referenciaTipo: referenciaTipo || null,
       notas: notas || null
@@ -57,7 +76,7 @@ export async function create(req, res, next) {
 
 export async function getById(req, res, next) {
   try {
-    const { idServicio } = req.params;
+    const idServicio = parseIdServicio(req.params.idServicio);
 
     if (!idServicio) {
       throw badRequest("ID de servicio requerido");
@@ -77,23 +96,20 @@ export async function getById(req, res, next) {
 
 export async function update(req, res, next) {
   try {
-    const { idServicio } = req.params;
+    const idServicio = parseIdServicio(req.params.idServicio);
     const { montoPagado, notas } = req.body;
 
     if (!idServicio) {
       throw badRequest("ID de servicio requerido");
     }
 
-    // Validar que el servicio existe
-    const servicio = await ServiciosService.getById(idServicio);
-    if (!servicio) {
-      throw notFound("Servicio no encontrado");
+    if (montoPagado === undefined && notas === undefined) {
+      throw badRequest("Debe enviar al menos un campo para actualizar");
     }
 
-    // Actualizar solo campos permitidos
     await ServiciosService.update(idServicio, {
-      montoPagado: montoPagado !== undefined ? montoPagado : servicio.MONTO_PAGADO,
-      notas: notas !== undefined ? notas : servicio.NOTAS
+      montoPagado,
+      notas,
     });
 
     res.json({ message: "Servicio actualizado exitosamente" });
@@ -104,7 +120,7 @@ export async function update(req, res, next) {
 
 export async function deleteById(req, res, next) {
   try {
-    const { idServicio } = req.params;
+    const idServicio = parseIdServicio(req.params.idServicio);
 
     if (!idServicio) {
       throw badRequest("ID de servicio requerido");
