@@ -9,6 +9,7 @@
     "start": "node src/server.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "export:ddl": "node scripts/export-schema-ddl.js",
     "import:articulos:dry": "node scripts/import-articulos-from-xls.js articulos.xls",
     "import:articulos": "node scripts/import-articulos-from-xls.js articulos.xls --apply",
     "import:articulos:dry:fixneg": "node scripts/import-articulos-from-xls.js articulos.xls --fix-negative-inventory",
