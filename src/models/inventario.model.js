@@ -14,9 +14,10 @@ function calcularNuevoStock(stockActual, tipo, cantidad) {
 }
 
 export async function createMovimientoConTransaccion(data) {
-  const conn = await getConnection();
-
+  let conn;
   try {
+    conn = await getConnection();
+
     const articuloResult = await conn.execute(
       `SELECT ID_ARTICULO, INVENTARIO_ACTUAL
        FROM ARTICULOS
@@ -75,10 +76,10 @@ export async function createMovimientoConTransaccion(data) {
       stockActual: nuevoStock
     };
   } catch (err) {
-    await conn.rollback();
+    if (conn) await conn.rollback();
     throw err;
   } finally {
-    await conn.close();
+    if (conn) await conn.close();
   }
 }
 

@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import * as AdminModel from "../models/administradores.model.js";
 import * as RolesModel from "../models/roles.model.js";
 import { AppError } from "../middleware/errorHandler.js";
-import { notFound, badRequest, conflict } from "../utils/httpErrors.js";
+import { notFound, badRequest, conflict, HttpError } from "../utils/httpErrors.js";
 
 const SALT_ROUNDS = 10;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -111,7 +111,10 @@ export async function update(idAdmin, { idRol, nombreCompleto, email }) {
   });
 }
 
-export async function changePassword(idAdmin, { passwordActual, passwordNueva }) {
+export async function changePassword(idAdmin, { passwordActual, passwordNueva }, callerIdAdmin) {
+  if (callerIdAdmin !== idAdmin) {
+    throw new HttpError(403, "Solo puedes cambiar tu propia contraseña");
+  }
   if (!passwordActual || !passwordNueva) {
     throw badRequest("Se requieren passwordActual y passwordNueva");
   }

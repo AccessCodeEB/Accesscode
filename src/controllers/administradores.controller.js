@@ -46,7 +46,11 @@ export async function update(req, res, next) {
 
 export async function changePassword(req, res, next) {
   try {
-    await AdminService.changePassword(Number(req.params.idAdmin), req.body);
+    await AdminService.changePassword(
+      Number(req.params.idAdmin),
+      req.body,
+      req.user.idAdmin
+    );
     res.json({ message: "Contraseña actualizada exitosamente" });
   } catch (err) {
     next(err);

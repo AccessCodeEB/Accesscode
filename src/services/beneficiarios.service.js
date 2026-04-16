@@ -85,8 +85,8 @@ function validarFormatos(data) {
 
   if (data.fechaNacimiento) {
     const fecha = new Date(data.fechaNacimiento);
-    const hoy = new Date();
-    const hace120Años = new Date();
+    const hoy = new Date(new Date().toISOString().slice(0, 10));
+    const hace120Años = new Date(hoy);
     hace120Años.setFullYear(hoy.getFullYear() - 120);
 
     if (isNaN(fecha.getTime())) {

@@ -1,0 +1,41 @@
+{
+  "date": "2026-04-16",
+  "window": "7d",
+  "metrics": {
+    "commits": 11,
+    "merges": 3,
+    "total_commits": 14,
+    "contributors": 4,
+    "prs_merged": 2,
+    "insertions": 2468,
+    "deletions": 160,
+    "net_loc": 2308,
+    "test_loc": 0,
+    "test_ratio": 0,
+    "active_days": 6,
+    "sessions": 7,
+    "deep_sessions": 1,
+    "avg_session_minutes": 12,
+    "loc_per_session_hour": 1600,
+    "feat_pct": 0.45,
+    "fix_pct": 0.00,
+    "peak_hour": 16,
+    "ai_assisted_commits": 0
+  },
+  "authors": {
+    "leobardonm": { "commits": 3, "insertions": 145, "deletions": 93, "test_ratio": 0, "top_area": "src/services+utils" },
+    "LeNav23": { "commits": 2, "insertions": 713, "deletions": 9, "test_ratio": 0, "top_area": "src/models+scripts" },
+    "victorvalero6": { "commits": 2, "insertions": 1210, "deletions": 50, "test_ratio": 0, "top_area": "src/services+docs" },
+    "santiac1": { "commits": 4, "insertions": 400, "deletions": 8, "test_ratio": 0, "top_area": "src/modules/membresias" }
+  },
+  "version_range": ["1.0.0", "1.0.0"],
+  "streak_days": 4,
+  "personal_streak_days": 1,
+  "tweetable": "Week of Apr 9: 11 commits (4 contributors), 2.3k LOC, 0% tests, 2 PRs, peak: 4pm | Team streak: 4d",
+  "test_health": {
+    "total_test_files": 1,
+    "tests_added_this_period": 0,
+    "regression_test_commits": 0,
+    "test_files_changed": 0
+  }
+}
