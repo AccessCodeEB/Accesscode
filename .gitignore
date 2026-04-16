@@ -32,3 +32,6 @@ jest.config.js.tmp
 
 # 🔐 Oracle Wallet (SENSITIVE)
 wallet/
+
+claude.md
+.claude/
