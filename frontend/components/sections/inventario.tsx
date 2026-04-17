@@ -43,10 +43,9 @@ export function InventarioSection() {
   const [error, setError]             = useState<string | null>(null)
   const [searchTerm, setSearchTerm]   = useState("")
   const [showMovimientoDialog, setShowMovimientoDialog] = useState(false)
-  const [tipoMovimiento, setTipoMovimiento] = useState<"entrada" | "salida">("entrada")
   const [selectedItem, setSelectedItem]     = useState<ArticuloInventario | null>(null)
   const [selectedArticuloId, setSelectedArticuloId] = useState<string>("")
-  const [cantidadMovimiento, setCantidadMovimiento] = useState<string>("1")
+  const [cantidadMovimiento, setCantidadMovimiento] = useState<string>("0")
   const [motivoMovimiento, setMotivoMovimiento] = useState<string>("")
   const [savingMovimiento, setSavingMovimiento] = useState(false)
   const [movimientoError, setMovimientoError] = useState<string | null>(null)
@@ -153,11 +152,10 @@ export function InventarioSection() {
     return sortDirection === "asc" ? " ▲" : " ▼"
   }
 
-  function openMovimiento(tipo: "entrada" | "salida", item: ArticuloInventario | null = null) {
-    setTipoMovimiento(tipo)
+  function openMovimiento(item: ArticuloInventario | null = null) {
     setSelectedItem(item)
     setSelectedArticuloId(item ? String(item.clave) : "")
-    setCantidadMovimiento("1")
+    setCantidadMovimiento("0")
     setMotivoMovimiento("")
     setMovimientoError(null)
     setShowMovimientoDialog(true)
@@ -169,18 +167,38 @@ export function InventarioSection() {
     setMovimientoError(null)
   }
 
+  function normalizarCantidadMovimiento(value: string) {
+    const parsed = Math.trunc(Number(value))
+    if (Number.isNaN(parsed)) return 0
+    return parsed
+  }
+
+  function incrementarCantidadMovimiento() {
+    setCantidadMovimiento((prev) => {
+      const current = normalizarCantidadMovimiento(prev)
+      return String(current + 1)
+    })
+  }
+
+  function disminuirCantidadMovimiento() {
+    setCantidadMovimiento((prev) => {
+      const current = normalizarCantidadMovimiento(prev)
+      return String(current - 1)
+    })
+  }
+
   async function handleConfirmMovimiento() {
     const idArticuloRaw = selectedItem ? selectedItem.clave : selectedArticuloId
     const idArticulo = Number(idArticuloRaw)
-    const cantidad = Number(cantidadMovimiento)
+    const cantidadConSigno = normalizarCantidadMovimiento(cantidadMovimiento)
 
     if (!idArticuloRaw || Number.isNaN(idArticulo)) {
       setMovimientoError("Selecciona un artículo válido.")
       return
     }
 
-    if (Number.isNaN(cantidad) || cantidad <= 0) {
-      setMovimientoError("La cantidad debe ser mayor a 0.")
+    if (cantidadConSigno === 0) {
+      setMovimientoError("La cantidad no puede ser 0.")
       return
     }
 
@@ -190,8 +208,8 @@ export function InventarioSection() {
     try {
       await registrarMovimiento({
         idArticulo,
-        tipo: tipoMovimiento === "entrada" ? "ENTRADA" : "SALIDA",
-        cantidad,
+        tipo: cantidadConSigno > 0 ? "ENTRADA" : "SALIDA",
+        cantidad: Math.abs(cantidadConSigno),
         motivo: motivoMovimiento.trim() || "Movimiento manual",
       })
 
@@ -426,12 +444,14 @@ export function InventarioSection() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" title="Registrar entrada" onClick={() => openMovimiento("entrada", item)}>
-                        <Plus className="size-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" title="Registrar salida" onClick={() => openMovimiento("salida", item)}>
-                        <Minus className="size-4" />
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        title="Modificar inventario"
+                        onClick={() => openMovimiento(item)}
+                      >
+                        Modificar
                       </Button>
                     </div>
                   </TableCell>
@@ -447,10 +467,10 @@ export function InventarioSection() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="size-5" />
-              Registrar {tipoMovimiento === "entrada" ? "Entrada" : "Salida"}
+              Modificar inventario
             </DialogTitle>
             <DialogDescription>
-              {selectedItem ? selectedItem.descripcion : "Seleccione el artículo y la cantidad."}
+              {selectedItem ? selectedItem.descripcion : "Seleccione el artículo y ajuste la cantidad."}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -471,12 +491,34 @@ export function InventarioSection() {
             )}
             <div className="flex flex-col gap-2">
               <Label>Cantidad</Label>
-              <Input
-                type="number"
-                min="1"
-                value={cantidadMovimiento}
-                onChange={(e) => setCantidadMovimiento(e.target.value)}
-              />
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={disminuirCantidadMovimiento}
+                  aria-label="Disminuir cantidad"
+                >
+                  -
+                </Button>
+                <div className="min-w-16 rounded-md border border-input bg-background px-4 py-2 text-center text-lg font-semibold">
+                  {normalizarCantidadMovimiento(cantidadMovimiento) > 0
+                    ? `+${normalizarCantidadMovimiento(cantidadMovimiento)}`
+                    : `${normalizarCantidadMovimiento(cantidadMovimiento)}`}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={incrementarCantidadMovimiento}
+                  aria-label="Aumentar cantidad"
+                >
+                  +
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                + agrega artículos y - quita artículos.
+              </p>
             </div>
             <div className="flex flex-col gap-2">
               <Label>Motivo</Label>
@@ -492,7 +534,7 @@ export function InventarioSection() {
             <div className="flex justify-end gap-3 pt-4">
               <Button type="button" variant="outline" onClick={closeMovimientoDialog} disabled={savingMovimiento}>Cancelar</Button>
               <Button type="button" onClick={handleConfirmMovimiento} disabled={savingMovimiento}>
-                {savingMovimiento ? "Guardando..." : `Confirmar ${tipoMovimiento === "entrada" ? "Entrada" : "Salida"}`}
+                {savingMovimiento ? "Guardando..." : "Confirmar modificación"}
               </Button>
             </div>
           </div>
