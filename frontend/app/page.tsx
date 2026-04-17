@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Settings, Moon, User, Save, Lock, Send, CheckCircle, Shield } from "lucide-react"
+import { Settings, Moon, User, Save, Lock, Send, CheckCircle, Shield, LogOut } from "lucide-react"
 import { FloatingNav } from "@/components/app-sidebar"
 import { useCurrentUser } from "@/hooks/use-current-user"
 import { useAdminData } from "@/hooks/useAdminData"
@@ -69,6 +69,7 @@ export default function Page() {
     loginForm, setLoginForm,
     loginError, loggingIn,
     handleLogin,
+    handleCloseAccount,
     admin, loadingAdmin, loadError,
     form, setForm,
     saving, saveError, saveOk,
@@ -160,25 +161,20 @@ export default function Page() {
         </div>
 
         <Sheet open={showEditData} onOpenChange={(v) => { setShowEditData(v); setShowPwForm(false) }}>
-          <SheetContent className="w-full sm:max-w-md flex flex-col gap-0 p-0">
+          <SheetContent className="w-full sm:max-w-md flex flex-col gap-0 p-0 bg-[#fbfcff] dark:bg-background border-l border-border/40 shadow-2xl">
 
-            {/* Header */}
-            <SheetHeader className="border-b border-border/50 px-6 py-5">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  <span className="text-sm font-bold">{user.initials}</span>
-                </div>
-                <div>
-                  <SheetTitle className="text-base leading-tight">Editar datos</SheetTitle>
-                  <SheetDescription className="mt-0.5 text-xs leading-tight">
-                    Actualiza la información básica de tu cuenta.
-                  </SheetDescription>
-                </div>
+            {/* Header (Igual a la imagen: alineado a la izquierda, sin avatar) */}
+            <SheetHeader className="border-b border-border/40 px-6 py-6 bg-background">
+              <div className="flex flex-col text-left">
+                <SheetTitle className="text-[19px] font-semibold text-foreground tracking-tight">Editar datos</SheetTitle>
+                <SheetDescription className="mt-1 text-[13px] text-muted-foreground">
+                  Actualiza la información básica de tu cuenta.
+                </SheetDescription>
               </div>
             </SheetHeader>
 
             {/* Body */}
-            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+            <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8">
 
               {needsLogin && (
                 <section className="space-y-4 pt-2">
@@ -194,6 +190,7 @@ export default function Page() {
                         value={loginForm.email}
                         onChange={(e) => setLoginForm((p) => ({ ...p, email: e.target.value }))}
                         onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                        className="h-10 bg-white dark:bg-muted/20 focus-visible:ring-1 focus-visible:ring-primary/40 shadow-sm"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -204,10 +201,11 @@ export default function Page() {
                         value={loginForm.password}
                         onChange={(e) => setLoginForm((p) => ({ ...p, password: e.target.value }))}
                         onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                        className="h-10 bg-white dark:bg-muted/20 focus-visible:ring-1 focus-visible:ring-primary/40 shadow-sm"
                       />
                     </div>
                     {loginError && <p className="text-xs text-destructive">{loginError}</p>}
-                    <Button type="button" className="w-full gap-2" disabled={loggingIn} onClick={handleLogin}>
+                    <Button type="button" className="w-full gap-2 h-10 shadow-sm" disabled={loggingIn} onClick={handleLogin}>
                       {loggingIn ? "Verificando..." : "Iniciar sesión"}
                     </Button>
                   </div>
@@ -226,67 +224,69 @@ export default function Page() {
 
               {!needsLogin && !loadingAdmin && !loadError && (
                 <>
-                  {/* ── Rol (solo lectura) ────────────────────────────── */}
-                  <section className="space-y-3">
-                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  {/* ── Rol (Solo lectura) ────────────────────────────── */}
+                  <section>
+                    <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-3">
                       <Shield className="size-3.5" />
                       Rol
                     </div>
-                    <div className="flex items-center gap-3 rounded-xl border border-border/40 bg-muted/20 px-4 py-3">
-                      <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <div className="flex items-center gap-3 rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 shadow-sm">
+                      <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
                         <Shield className="size-4" />
                       </div>
-                      <span className="text-sm font-semibold text-foreground">
-                        {admin?.nombreRol ?? "—"}
+                      <span className="text-[14px] font-semibold text-foreground">
+                        {admin?.nombreRol ?? "Recepción"}
                       </span>
                     </div>
                   </section>
 
-                  <Separator />
+                  <Separator className="bg-border/50" />
 
                   {/* ── Perfil editable ───────────────────────────────── */}
-                  <section className="space-y-3">
-                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  <section>
+                    <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-4">
                       <User className="size-3.5" />
                       Perfil
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Nombre completo</Label>
+                        <Label className="text-[13px] font-semibold text-foreground">Nombre completo</Label>
                         <Input
                           value={form.nombreCompleto}
                           onChange={(e) => setForm((p) => ({ ...p, nombreCompleto: e.target.value }))}
                           placeholder="Tu nombre"
+                          className="h-10 bg-white dark:bg-muted/20 border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 shadow-sm transition-all"
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Correo electrónico</Label>
+                        <Label className="text-[13px] font-semibold text-foreground">Correo electrónico</Label>
                         <Input
                           type="email"
                           value={form.email}
                           onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
                           placeholder="correo@ejemplo.com"
+                          className="h-10 bg-white dark:bg-muted/20 border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 shadow-sm transition-all"
                         />
                       </div>
                     </div>
 
                     {saveError && (
-                      <p className="text-xs text-destructive">{saveError}</p>
+                      <p className="mt-3 text-xs text-destructive">{saveError}</p>
                     )}
                     {saveOk && (
-                      <div className="flex items-center gap-2 text-xs text-success">
+                      <div className="mt-3 flex items-center gap-2 text-xs font-medium text-success">
                         <CheckCircle className="size-3.5" />
                         Datos guardados correctamente.
                       </div>
                     )}
                   </section>
 
-                  <Separator />
+                  <Separator className="bg-border/50" />
 
                   {/* ── Contraseña ────────────────────────────────────── */}
-                  <section className="space-y-3">
-                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  <section>
+                    <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-4">
                       <Lock className="size-3.5" />
                       Contraseña
                     </div>
@@ -295,30 +295,30 @@ export default function Page() {
                       <Button
                         type="button"
                         variant="outline"
-                        className="w-full gap-2"
+                        className="w-full gap-2 h-10 border-border/60 bg-white dark:bg-transparent shadow-sm hover:bg-accent transition-colors"
                         onClick={() => setShowPwForm(true)}
                       >
-                        <Lock className="size-4" />
+                        <Lock className="size-4 text-muted-foreground" />
                         Cambiar contraseña
                       </Button>
                     ) : (
-                      <div className="space-y-3 rounded-xl border border-border/40 bg-muted/20 p-4">
+                      <div className="space-y-4 rounded-2xl border border-border/50 bg-white dark:bg-muted/10 p-5 shadow-sm">
 
-                        {/* Flujo de código por email — preparado */}
-                        <div className="flex items-start gap-3 rounded-lg bg-primary/5 border border-primary/20 px-3 py-2.5">
+                        {/* Flujo de código por email */}
+                        <div className="flex items-start gap-3 rounded-xl bg-primary/5 border border-primary/20 px-3 py-3">
                           <Send className="size-4 text-primary mt-0.5 shrink-0" />
-                          <div className="text-xs text-muted-foreground">
-                            <span className="font-semibold text-foreground">Verificación por email</span>
+                          <div className="text-xs text-muted-foreground leading-relaxed">
+                            <span className="font-semibold text-foreground block mb-0.5">Verificación de seguridad</span>
                             {codeSent
-                              ? " — Código enviado. Revisa tu correo."
-                              : " — Próximamente recibirás un código en tu correo para confirmar el cambio."}
+                              ? "Código enviado. Por favor, revisa tu bandeja de entrada."
+                              : "Te enviaremos un código a tu correo para confirmar este cambio."}
                           </div>
                         </div>
                         <Button
                           type="button"
-                          variant="outline"
+                          variant="secondary"
                           size="sm"
-                          className="w-full gap-2 text-xs"
+                          className="w-full gap-2 text-xs font-semibold shadow-sm h-9"
                           disabled={codeSent || sendingCode}
                           onClick={handleSendCode}
                         >
@@ -326,10 +326,10 @@ export default function Page() {
                           {sendingCode ? "Enviando..." : codeSent ? "Código enviado" : "Enviar código al correo"}
                         </Button>
                         {codeError && (
-                          <p className="text-xs text-muted-foreground italic">{codeError}</p>
+                          <p className="text-[11px] text-destructive">{codeError}</p>
                         )}
 
-                        <Separator />
+                        <Separator className="my-2 bg-border/50" />
 
                         <div className="space-y-1.5">
                           <Label className="text-xs font-semibold">Contraseña actual</Label>
@@ -338,6 +338,7 @@ export default function Page() {
                             placeholder="••••••••"
                             value={pwForm.passwordActual}
                             onChange={(e) => setPwForm((p) => ({ ...p, passwordActual: e.target.value }))}
+                            className="h-9 text-sm focus-visible:ring-1 focus-visible:ring-primary/40"
                           />
                         </div>
                         <div className="space-y-1.5">
@@ -347,6 +348,7 @@ export default function Page() {
                             placeholder="Mínimo 6 caracteres"
                             value={pwForm.passwordNueva}
                             onChange={(e) => setPwForm((p) => ({ ...p, passwordNueva: e.target.value }))}
+                            className="h-9 text-sm focus-visible:ring-1 focus-visible:ring-primary/40"
                           />
                         </div>
                         <div className="space-y-1.5">
@@ -356,23 +358,23 @@ export default function Page() {
                             placeholder="Repite la nueva contraseña"
                             value={pwForm.confirmar}
                             onChange={(e) => setPwForm((p) => ({ ...p, confirmar: e.target.value }))}
+                            className="h-9 text-sm focus-visible:ring-1 focus-visible:ring-primary/40"
                           />
                         </div>
 
                         {pwError && <p className="text-xs text-destructive">{pwError}</p>}
                         {pwOk && (
-                          <div className="flex items-center gap-2 text-xs text-success">
+                          <div className="flex items-center gap-2 text-xs font-medium text-success">
                             <CheckCircle className="size-3.5" />
                             Contraseña actualizada correctamente.
                           </div>
                         )}
 
-                        <div className="flex gap-2 pt-1">
+                        <div className="flex gap-3 pt-2">
                           <Button
                             type="button"
                             variant="outline"
-                            size="sm"
-                            className="flex-1"
+                            className="flex-1 h-9 shadow-sm"
                             disabled={pwSaving}
                             onClick={() => { setShowPwForm(false) }}
                           >
@@ -380,12 +382,11 @@ export default function Page() {
                           </Button>
                           <Button
                             type="button"
-                            size="sm"
-                            className="flex-1 gap-2"
+                            className="flex-1 gap-2 h-9 shadow-sm"
                             disabled={pwSaving}
                             onClick={handleChangePassword}
                           >
-                            {pwSaving ? "Guardando..." : "Confirmar cambio"}
+                            {pwSaving ? "Guardando..." : "Confirmar"}
                           </Button>
                         </div>
                       </div>
@@ -396,21 +397,36 @@ export default function Page() {
             </div>
 
             {/* Footer */}
-            <div className="flex gap-3 border-t border-border/50 px-6 py-4">
-              <Button type="button" variant="outline" className="flex-1" onClick={() => setShowEditData(false)}>
-                Cerrar
-              </Button>
-              {!needsLogin && (
-                <Button
-                  type="button"
-                  className="flex-1 gap-2"
-                  disabled={saving || loadingAdmin}
-                  onClick={handleSave}
-                >
-                  <Save className="size-4" />
-                  {saving ? "Guardando..." : "Guardar"}
-                </Button>
+            <div className="border-t border-border/40 bg-background">
+              {!needsLogin && !loadingAdmin && !loadError && admin && (
+                <div className="px-6 pt-4">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={handleCloseAccount}
+                  >
+                    <LogOut className="size-4" />
+                    Cerrar cuenta
+                  </Button>
+                </div>
               )}
+              <div className="flex gap-3 px-6 py-4">
+                <Button type="button" variant="outline" className="flex-1 shadow-sm" onClick={() => setShowEditData(false)}>
+                  Cancelar
+                </Button>
+                {!needsLogin && (
+                  <Button
+                    type="button"
+                    className="flex-1 gap-2 shadow-sm"
+                    disabled={saving || loadingAdmin}
+                    onClick={handleSave}
+                  >
+                    <Save className="size-4" />
+                    {saving ? "Guardando..." : "Guardar cambios"}
+                  </Button>
+                )}
+              </div>
             </div>
 
           </SheetContent>

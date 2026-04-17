@@ -147,6 +147,23 @@ export function useAdminData(open: boolean) {
     }
   }
 
+  function handleCloseAccount() {
+    tokenStorage.clear()
+    setAdmin(null)
+    setAdminId(null)
+    setForm(EMPTY_FORM)
+    setNeedsLogin(true)
+    setLoadError(null)
+    setSaveError(null)
+    setSaveOk(false)
+    setShowPwForm(false)
+    setPwForm(EMPTY_PW)
+    setPwError(null)
+    setPwOk(false)
+    setCodeSent(false)
+    setCodeError(null)
+  }
+
   async function handleSendCode() {
     if (!admin) return
     setSendingCode(true)
@@ -171,6 +188,7 @@ export function useAdminData(open: boolean) {
     loginForm, setLoginForm,
     loginError, loggingIn,
     handleLogin,
+    handleCloseAccount,
     admin, loadingAdmin, loadError,
     form, setForm,
     saving, saveError, saveOk,
