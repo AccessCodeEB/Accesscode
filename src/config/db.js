@@ -1,4 +1,5 @@
 import oracledb from "oracledb";
+import fs from "fs";
 import path from "path";
 
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
@@ -12,7 +13,11 @@ let _pool = null;
 export async function createPool() {
   if (_pool) return; // idempotente
 
-  process.env.TNS_ADMIN = path.join(process.cwd(), "wallet");
+  const walletRoot = path.join(process.cwd(), "wallet");
+  const nestedWallet = path.join(walletRoot, "wallet");
+  process.env.TNS_ADMIN = fs.existsSync(path.join(nestedWallet, "tnsnames.ora"))
+    ? nestedWallet
+    : walletRoot;
   oracledb.initOracleClient({ libDir: process.env.ORACLE_CLIENT_PATH });
 
   _pool = await oracledb.createPool({
