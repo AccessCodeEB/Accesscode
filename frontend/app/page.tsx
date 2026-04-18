@@ -40,15 +40,15 @@ const VALID_SECTIONS = new Set([
 
 function SectionContent({ section }: { section: string }) {
   switch (section) {
-    case "dashboard":     return <DashboardSection />
+    case "dashboard": return <DashboardSection />
     case "beneficiarios": return <BeneficiariosSection />
-    case "membresias":    return <MembresiasSection />
-    case "servicios":     return <ServiciosSection />
-    case "inventario":    return <InventarioSection />
-    case "citas":         return <CitasSection />
-    case "reportes":      return <ReportesSection />
-    case "preregistro":   return <PreregistroSection />
-    default:              return <DashboardSection />
+    case "membresias": return <MembresiasSection />
+    case "servicios": return <ServiciosSection />
+    case "inventario": return <InventarioSection />
+    case "citas": return <CitasSection />
+    case "reportes": return <ReportesSection />
+    case "preregistro": return <PreregistroSection />
+    default: return <DashboardSection />
   }
 }
 
@@ -62,7 +62,7 @@ function getInitials(name: string): string {
 }
 
 function HomeContent() {
-  const router       = useRouter()
+  const router = useRouter()
   const searchParams = useSearchParams()
 
   // ── Auth — fuente de verdad para sesión y datos del usuario ─────────
@@ -92,13 +92,13 @@ function HomeContent() {
   }
 
   // ── UI state ────────────────────────────────────────────────────────
-  const [showSettings,    setShowSettings]    = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [showEditProfile, setShowEditProfile] = useState(false)
-  const [darkMode,        setDarkMode]        = useState(false)
+  const [darkMode, setDarkMode] = useState(false)
 
   // ── Datos del usuario desde el JWT (sin llamadas extra al backend) ───
-  const userName     = session?.nombreCompleto ?? ""
-  const userRole     = session?.nombreRol      ?? ""
+  const userName = session?.nombreCompleto ?? ""
+  const userRole = session?.nombreRol ?? ""
   const userInitials = getInitials(userName)
 
   // ── Guards ──────────────────────────────────────────────────────────
@@ -120,7 +120,7 @@ function HomeContent() {
       <div className="min-h-screen w-full bg-background">
 
         {/* ── Header ──────────────────────────────────────────────── */}
-        <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b border-border bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:px-6">
+        <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b border-border bg-background/95 px-4 backdrop-blur supports-backdrop-filter:bg-background/60 md:px-6">
           <FloatingNav activeSection={activeSection} onSectionChange={handleSectionChange} />
 
           <div className="ml-auto flex items-center gap-3">
