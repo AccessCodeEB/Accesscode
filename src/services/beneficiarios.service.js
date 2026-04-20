@@ -124,9 +124,6 @@ export async function toggleEstatus(curp, estatus) {
   if (!existente) {
     throw notFound(`No existe un beneficiario con la CURP ${curp}`);
   }
-  if (existente.ESTATUS === "Baja") {
-    throw conflict("No se puede modificar un beneficiario con estatus 'Baja'");
-  }
   await BeneficiarioModel.updateEstatus(curp, estatus);
 }
 
@@ -157,10 +154,6 @@ export async function update(curp, data) {
   if (!existente) {
     throw notFound(`No existe un beneficiario con la CURP ${curp}`, "BENEFICIARIO_NOT_FOUND");
   }
-  if (existente.ESTATUS === "Baja") {
-    throw conflict("No se puede modificar un beneficiario con estatus 'Baja'", "BENEFICIARIO_BAJA");
-  }
-
   data.estatus = existente.ESTATUS;
   return BeneficiarioModel.update(curp, data);
 }

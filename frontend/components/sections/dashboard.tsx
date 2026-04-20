@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Users, CreditCard, ClipboardList, Package, CalendarDays } from "lucide-react"
+import React, { useEffect, useState } from "react"
+import { CreditCard, ClipboardList, Package, CalendarDays, ChevronLeft, ChevronRight, UserCheck, UserX } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { getInventario } from "@/services/inventario"
+import { getBeneficiarios } from "@/services/beneficiarios"
 import {
   BarChart,
   Bar,
@@ -21,41 +22,6 @@ import {
 
 const INVENTARIO_BAJO_UMBRAL = 3
 
-// Reintegramos los colores originales de tus tarjetas
-const staticStatsCards = [
-  {
-    title: "Beneficiarios Activos",
-    value: "247",
-    description: "+12 nuevos este mes",
-    icon: Users,
-    color: "bg-primary text-primary-foreground",
-  },
-  {
-    title: "Membresías por Vencer",
-    value: "18",
-    description: "En los próximos 30 días",
-    icon: CreditCard,
-    // Usé colores estándar de tailwind por si "bg-warning" no está en tu config, 
-    // pero puedes cambiarlo a "bg-warning" si ya lo tienes definido.
-    color: "bg-amber-500 text-white", 
-  },
-  {
-    title: "Servicios del Mes",
-    value: "83",
-    description: "Cierre proyectado: Febrero",
-    icon: ClipboardList,
-    color: "bg-primary text-primary-foreground",
-  },
-  {
-    title: "Inventario Bajo",
-    value: "--",
-    description: `Artículos con ${INVENTARIO_BAJO_UMBRAL} o menos`,
-    icon: Package,
-    color: "bg-destructive text-destructive-foreground",
-    iconClassName: "text-white",
-  },
-]
-
 const monthlyData = [
   { mes: "Sep", atenciones: 65 },
   { mes: "Oct", atenciones: 78 },
@@ -65,19 +31,56 @@ const monthlyData = [
   { mes: "Feb", atenciones: 83 },
 ]
 
-// Usamos los colores exactos de tu gráfica original (azul y amarillo/naranja)
 const locationData = [
-  { name: "Locales", value: 168, fill: "#005bb5" }, // Azul similar a tu imagen
-  { name: "Foráneos", value: 79, fill: "#eab308" }, // Amarillo similar a tu imagen
+  { name: "Locales", value: 168, fill: "#005bb5" },
+  { name: "Foráneos", value: 79, fill: "#eab308" },
 ]
+
+/** Tarjeta estática de beneficiarios activos */
+function BeneficiariosCard({
+  activosMembresia,
+  loading,
+}: {
+  activosMembresia: number | null
+  loading: boolean
+}) {
+  return (
+    <Card className="shadow-sm border-border/60 relative overflow-hidden">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          Membresías Activas
+        </CardTitle>
+        <div className="flex size-9 items-center justify-center rounded-lg shadow-sm bg-primary text-primary-foreground transition-colors duration-300">
+          <UserCheck className="size-4" />
+        </div>
+      </CardHeader>
+
+      <CardContent>
+        <div className="text-2xl font-bold tracking-tight text-foreground">
+          {loading ? "—" : activosMembresia === null ? "--" : String(activosMembresia)}
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          {loading ? "Cargando datos…" : "Beneficiarios con membresía vigente"}
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
 
 export function DashboardSection() {
   const [activeBar, setActiveBar] = useState<{ mes: string; atenciones: number } | null>(null)
   const [inventarioBajoCount, setInventarioBajoCount] = useState<number | null>(null)
 
+  // Beneficiarios desde la API
+  const [activosMembresia, setActivosMembresia] = useState<number | null>(null)
+  const [inactivosMembresia, setInactivosMembresia] = useState<number | null>(null)
+  const [bajaCount, setBajaCount] = useState<number | null>(null)
+  const [loadingBenef, setLoadingBenef] = useState(true)
+
   useEffect(() => {
     let cancelled = false
 
+    // Inventario
     getInventario()
       .then((items) => {
         if (cancelled) return
@@ -89,29 +92,67 @@ export function DashboardSection() {
         setInventarioBajoCount(null)
       })
 
+    // Beneficiarios reales — el estatus del beneficiario ES la fuente de verdad
+    getBeneficiarios()
+      .then((beneficiarios) => {
+        if (cancelled) return
+        const activos = beneficiarios.filter((b) => b.estatus === "Activo").length
+        const inactivos = beneficiarios.filter((b) => b.estatus === "Inactivo").length
+        const bajas = beneficiarios.filter((b) => b.estatus === "Baja").length
+        setActivosMembresia(activos)
+        setInactivosMembresia(inactivos)
+        setBajaCount(bajas)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setActivosMembresia(null)
+        setInactivosMembresia(null)
+        setBajaCount(null)
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingBenef(false)
+      })
+
     return () => {
       cancelled = true
     }
   }, [])
 
-  const statsCards = staticStatsCards.map((card) => {
-    if (card.title !== "Inventario Bajo") return card
+  const inventarioCard = {
+    title: "Inventario Bajo",
+    value: inventarioBajoCount === null ? "--" : String(inventarioBajoCount),
+    description:
+      inventarioBajoCount === null
+        ? "No se pudo cargar inventario"
+        : `${inventarioBajoCount} ${inventarioBajoCount === 1 ? "artículo requiere" : "artículos requieren"} atención`,
+    icon: Package,
+    color: "bg-destructive text-destructive-foreground",
+    iconClassName: "text-white",
+  }
 
-    const value = inventarioBajoCount === null ? "--" : String(inventarioBajoCount)
-    const description = inventarioBajoCount === null
-      ? "No se pudo cargar inventario"
-      : `${inventarioBajoCount} ${inventarioBajoCount === 1 ? "artículo requiere" : "artículos requieren"} atención`
-
-    return {
-      ...card,
-      value,
-      description,
-    }
-  })
+  const staticCards = [
+    {
+      title: "Membresías por Vencer",
+      value: "18",
+      description: "En los próximos 30 días",
+      icon: CreditCard,
+      color: "bg-amber-500 text-white",
+      iconClassName: "",
+    },
+    {
+      title: "Servicios del Mes",
+      value: "83",
+      description: "Cierre proyectado: Febrero",
+      icon: ClipboardList,
+      color: "bg-primary text-primary-foreground",
+      iconClassName: "",
+    },
+    inventarioCard,
+  ]
 
   return (
     <div className="flex flex-col gap-8 pb-8">
-      {/* Encabezado con selector de fechas simulado */}
+      {/* Encabezado */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
@@ -127,17 +168,25 @@ export function DashboardSection() {
         </div>
       </div>
 
-      {/* Tarjetas de Métricas - Con color controlado */}
+      {/* Tarjetas de Métricas */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {statsCards.map((card) => (
+        {/* Tarjeta especial de beneficiarios con slide */}
+        <BeneficiariosCard
+          activosMembresia={activosMembresia}
+          inactivosMembresia={inactivosMembresia}
+          bajaCount={bajaCount}
+          loading={loadingBenef}
+        />
+
+        {/* Tarjetas estáticas restantes */}
+        {staticCards.map((card) => (
           <Card key={card.title} className="shadow-sm border-border/60">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {card.title}
               </CardTitle>
-              {/* Contenedor de color más pequeño y sutil (size-9) */}
               <div className={`flex size-9 items-center justify-center rounded-lg shadow-sm ${card.color}`}>
-                <card.icon className={`size-4.5 ${card.iconClassName ?? ""}`} />
+                <card.icon className={`size-[18px] ${card.iconClassName ?? ""}`} />
               </div>
             </CardHeader>
             <CardContent>

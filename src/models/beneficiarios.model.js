@@ -11,7 +11,7 @@ export async function findAll() {
               b.TELEFONO_CASA, b.TELEFONO_CELULAR, b.CORREO_ELECTRONICO,
               b.CONTACTO_EMERGENCIA, b.TELEFONO_EMERGENCIA,
               b.MUNICIPIO_NACIMIENTO, b.HOSPITAL_NACIMIENTO,
-              b.USA_VALVULA, b.NOTAS, b.ESTATUS,
+              b.USA_VALVULA, b.NOTAS, b.ESTATUS, b.FECHA_ALTA,
               CASE
                 WHEN EXISTS (
                   SELECT 1 FROM CREDENCIALES c

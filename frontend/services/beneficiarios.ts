@@ -58,6 +58,11 @@ export function updateEstatusBeneficiario(folio: string, estatus: "Activo" | "In
   return apiClient.patch<{ message: string }>(`/beneficiarios/${folio}/estatus`, { estatus })
 }
 
+/** DELETE /beneficiarios/:folio — ocultar/baja lógica */
+export function deactivateBeneficiario(folio: string) {
+  return apiClient.delete<{ message: string }>(`/beneficiarios/${folio}`)
+}
+
 /** DELETE /beneficiarios/:folio/eliminar — eliminación permanente (solo Baja) */
 export function deleteBeneficiario(folio: string) {
   return apiClient.delete<{ message: string }>(`/beneficiarios/${folio}/eliminar`)

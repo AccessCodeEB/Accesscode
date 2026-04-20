@@ -145,3 +145,29 @@
     display: none;
   }
 }
+
+@layer components {
+  /* Sonner: bloque centrado en vertical (viewport), sin anclar arriba */
+  [data-sonner-toaster].sonner-app-toaster {
+    top: 50% !important;
+    bottom: auto !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translate(-50%, -50%) !important;
+  }
+
+  /* Salida más estable: menos propiedades animadas, sin interacción al desmontar */
+  [data-sonner-toaster] [data-sonner-toast] {
+    transition-property: opacity, transform !important;
+    transition-duration: 180ms !important;
+    transition-timing-function: cubic-bezier(0.33, 1, 0.68, 1) !important;
+  }
+
+  [data-sonner-toaster] [data-sonner-toast][data-removed='true'] {
+    pointer-events: none;
+  }
+
+  [data-sonner-toaster] [data-sonner-toast][data-swiping='true'] {
+    transition-duration: 0ms !important;
+  }
+}

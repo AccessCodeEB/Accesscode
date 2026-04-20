@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Settings, Moon, LogOut, User } from "lucide-react"
+import { useTheme } from "next-themes"
 import { FloatingNav } from "@/components/app-sidebar"
 import { useAuth } from "@/hooks/useAuth"
 import { LoginScreen } from "@/components/login-screen"
@@ -94,7 +95,7 @@ function HomeContent() {
   // ── UI state ────────────────────────────────────────────────────────
   const [showSettings, setShowSettings] = useState(false)
   const [showEditProfile, setShowEditProfile] = useState(false)
-  const [darkMode, setDarkMode] = useState(false)
+  const { theme, setTheme } = useTheme()
 
   // ── Datos del usuario desde el JWT (sin llamadas extra al backend) ───
   const userName = session?.nombreCompleto ?? ""
@@ -116,7 +117,7 @@ function HomeContent() {
 
   // ── App principal ───────────────────────────────────────────────────
   return (
-    <div className={darkMode ? "dark" : ""}>
+    <>
       <div className="min-h-screen w-full bg-background">
 
         {/* ── Header ──────────────────────────────────────────────── */}
@@ -189,7 +190,7 @@ function HomeContent() {
                         <span className="text-[11px] leading-tight text-muted-foreground">Cambiar la apariencia</span>
                       </div>
                     </div>
-                    <Switch checked={darkMode} onCheckedChange={setDarkMode} className="shrink-0" />
+                    <Switch checked={theme === "dark"} onCheckedChange={(val) => setTheme(val ? "dark" : "light")} className="shrink-0" />
                   </div>
 
                   <DropdownMenuSeparator className="my-1 opacity-50" />
@@ -225,7 +226,7 @@ function HomeContent() {
         onProfileSaved={(nombreCompleto, email) => updateSession({ nombreCompleto, email })}
       />
 
-    </div>
+    </>
   )
 }
 
