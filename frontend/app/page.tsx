@@ -62,6 +62,14 @@ function getInitials(name: string): string {
     .join("")
 }
 
+function normalizeRoleLabel(rawRole: string): string {
+  if (!rawRole) return ""
+
+  return rawRole
+    .replace(/RecepciÃ³n/gi, "Recepcion")
+    .replace(/Recepción/gi, "Recepcion")
+}
+
 function HomeContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -99,7 +107,7 @@ function HomeContent() {
 
   // ── Datos del usuario desde el JWT (sin llamadas extra al backend) ───
   const userName = session?.nombreCompleto ?? ""
-  const userRole = session?.nombreRol ?? ""
+  const userRole = normalizeRoleLabel(session?.nombreRol ?? "")
   const userInitials = getInitials(userName)
 
   // ── Guards ──────────────────────────────────────────────────────────

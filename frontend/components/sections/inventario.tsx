@@ -346,14 +346,14 @@ export function InventarioSection() {
         <div className="flex gap-2">
           <Button
             variant="outline"
-            className="gap-2 text-foreground border-border/60 bg-background/70 hover:bg-accent hover:text-accent-foreground"
+            className="gap-2 border-emerald-500/40 text-emerald-700 bg-emerald-50/40 hover:bg-emerald-100 hover:text-emerald-800 dark:text-emerald-300 dark:border-emerald-400/40 dark:bg-emerald-950/20 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-200"
             onClick={openAgregarArticulo}
           >
             <Plus className="size-4" />Agregar artículo
           </Button>
           <Button
             variant="outline"
-            className="gap-2 text-foreground border-border/60 bg-background/70 hover:bg-accent hover:text-accent-foreground"
+            className="gap-2 border-red-500/40 text-red-700 bg-red-50/40 hover:bg-red-100 hover:text-red-800 dark:text-red-300 dark:border-red-400/40 dark:bg-red-950/20 dark:hover:bg-red-900/40 dark:hover:text-red-200"
             onClick={openEliminarArticulo}
           >
             <Minus className="size-4" />Eliminar artículo
@@ -404,35 +404,35 @@ export function InventarioSection() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="font-semibold">
+                <TableHead className="font-semibold text-center">
                   <button type="button" className="cursor-pointer" onClick={() => handleSort("clave")}>Clave{sortIndicator("clave")}</button>
                 </TableHead>
-                <TableHead className="font-semibold">
+                <TableHead className="font-semibold text-center">
                   <button type="button" className="cursor-pointer" onClick={() => handleSort("descripcion")}>Descripción{sortIndicator("descripcion")}</button>
                 </TableHead>
-                <TableHead className="font-semibold hidden md:table-cell">
+                <TableHead className="font-semibold hidden md:table-cell text-center">
                   <button type="button" className="cursor-pointer" onClick={handleUnidadCycle}>
                     Unidad
                   </button>
                 </TableHead>
-                <TableHead className="font-semibold hidden lg:table-cell">
+                <TableHead className="font-semibold hidden lg:table-cell text-center">
                   <button type="button" className="cursor-pointer" onClick={() => handleSort("cuota")}>Cuota{sortIndicator("cuota")}</button>
                 </TableHead>
-                <TableHead className="font-semibold">
+                <TableHead className="font-semibold text-center">
                   <button type="button" className="cursor-pointer" onClick={() => handleSort("cantidad")}>Cantidad{sortIndicator("cantidad")}</button>
                 </TableHead>
-                <TableHead className="font-semibold text-right">Acciones</TableHead>
+                <TableHead className="font-semibold text-center">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedFiltered.map((item, idx) => (
                 <TableRow key={`${item.clave}-${idx}`} className={item.cantidad < item.minimo ? "bg-destructive/5" : ""}>
-                  <TableCell className="font-mono font-semibold text-primary">{item.clave}</TableCell>
-                  <TableCell className="font-medium">{item.descripcion}</TableCell>
-                  <TableCell className="hidden md:table-cell text-muted-foreground">{item.unidad}</TableCell>
-                  <TableCell className="hidden lg:table-cell text-muted-foreground">{item.cuota}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
+                  <TableCell className="text-center font-semibold text-primary">{item.clave}</TableCell>
+                  <TableCell className="text-center font-medium">{item.descripcion}</TableCell>
+                  <TableCell className="hidden md:table-cell text-center text-foreground">{item.unidad}</TableCell>
+                  <TableCell className="hidden lg:table-cell text-center text-foreground">{item.cuota}</TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex items-center justify-center gap-2">
                       <span className={`font-bold ${item.cantidad < item.minimo ? "text-destructive" : "text-foreground"}`}>
                         {item.cantidad}
                       </span>
@@ -443,8 +443,8 @@ export function InventarioSection() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
+                  <TableCell className="text-center">
+                    <div className="flex items-center justify-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"

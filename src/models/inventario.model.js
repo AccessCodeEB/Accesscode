@@ -5,6 +5,11 @@ function insufficientStockError(disponible) {
   return new HttpError(422, "Stock insuficiente", "INSUFFICIENT_STOCK", { disponible });
 }
 
+function hasMissingStockResultanteColumn(err) {
+  const msg = String(err?.message ?? "").toUpperCase();
+  return msg.includes("ORA-00904") && msg.includes("STOCK_RESULTANTE");
+}
+
 function calcularNuevoStock(stockActual, tipo, cantidad) {
   if (tipo === "ENTRADA") {
     return stockActual + cantidad;
@@ -34,30 +39,59 @@ export async function applyMovimientoConConexion(conn, data) {
   const stockActual = Number(articulo.INVENTARIO_ACTUAL || 0);
   const stockResultante = calcularNuevoStock(stockActual, data.tipo, data.cantidad);
 
-  await conn.execute(
-    `INSERT INTO MOVIMIENTOS_INVENTARIO (
-       ID_ARTICULO,
-       TIPO_MOVIMIENTO,
-       CANTIDAD,
-       MOTIVO,
-       FECHA,
-       STOCK_RESULTANTE
-     ) VALUES (
-       :idArticulo,
-       :tipo,
-       :cantidad,
-       :motivo,
-       SYSDATE,
-       :stockResultante
-     )`,
-    {
-      idArticulo: data.idArticulo,
-      tipo: data.tipo,
-      cantidad: data.cantidad,
-      motivo: data.motivo ?? null,
-      stockResultante,
+  try {
+    await conn.execute(
+      `INSERT INTO MOVIMIENTOS_INVENTARIO (
+         ID_ARTICULO,
+         TIPO_MOVIMIENTO,
+         CANTIDAD,
+         MOTIVO,
+         FECHA,
+         STOCK_RESULTANTE
+       ) VALUES (
+         :idArticulo,
+         :tipo,
+         :cantidad,
+         :motivo,
+         SYSDATE,
+         :stockResultante
+       )`,
+      {
+        idArticulo: data.idArticulo,
+        tipo: data.tipo,
+        cantidad: data.cantidad,
+        motivo: data.motivo ?? null,
+        stockResultante,
+      }
+    );
+  } catch (err) {
+    if (!hasMissingStockResultanteColumn(err)) {
+      throw err;
     }
-  );
+
+    // Compatibilidad con esquemas que aún no tienen la columna STOCK_RESULTANTE.
+    await conn.execute(
+      `INSERT INTO MOVIMIENTOS_INVENTARIO (
+         ID_ARTICULO,
+         TIPO_MOVIMIENTO,
+         CANTIDAD,
+         MOTIVO,
+         FECHA
+       ) VALUES (
+         :idArticulo,
+         :tipo,
+         :cantidad,
+         :motivo,
+         SYSDATE
+       )`,
+      {
+        idArticulo: data.idArticulo,
+        tipo: data.tipo,
+        cantidad: data.cantidad,
+        motivo: data.motivo ?? null,
+      }
+    );
+  }
 
   await conn.execute(
     `UPDATE ARTICULOS
@@ -115,20 +149,40 @@ export async function findInventarioActual() {
 export async function findMovimientos() {
   const conn = await getConnection();
   try {
-    const result = await conn.execute(
-      `SELECT M.ID_MOVIMIENTO,
-              M.ID_ARTICULO,
-              A.DESCRIPCION,
-              M.TIPO_MOVIMIENTO,
-              M.CANTIDAD,
-              M.MOTIVO,
-                    M.FECHA,
-                    M.STOCK_RESULTANTE
-      FROM MOVIMIENTOS_INVENTARIO M
-       JOIN ARTICULOS A ON A.ID_ARTICULO = M.ID_ARTICULO
-       ORDER BY M.FECHA DESC, M.ID_MOVIMIENTO DESC`
-    );
-    return result?.rows ?? [];
+    try {
+      const result = await conn.execute(
+        `SELECT M.ID_MOVIMIENTO,
+                M.ID_ARTICULO,
+                A.DESCRIPCION,
+                M.TIPO_MOVIMIENTO,
+                M.CANTIDAD,
+                M.MOTIVO,
+                M.FECHA,
+                M.STOCK_RESULTANTE
+        FROM MOVIMIENTOS_INVENTARIO M
+         JOIN ARTICULOS A ON A.ID_ARTICULO = M.ID_ARTICULO
+         ORDER BY M.FECHA DESC, M.ID_MOVIMIENTO DESC`
+      );
+      return result?.rows ?? [];
+    } catch (err) {
+      if (!hasMissingStockResultanteColumn(err)) {
+        throw err;
+      }
+
+      const result = await conn.execute(
+        `SELECT M.ID_MOVIMIENTO,
+                M.ID_ARTICULO,
+                A.DESCRIPCION,
+                M.TIPO_MOVIMIENTO,
+                M.CANTIDAD,
+                M.MOTIVO,
+                M.FECHA
+        FROM MOVIMIENTOS_INVENTARIO M
+         JOIN ARTICULOS A ON A.ID_ARTICULO = M.ID_ARTICULO
+         ORDER BY M.FECHA DESC, M.ID_MOVIMIENTO DESC`
+      );
+      return result?.rows ?? [];
+    }
   } finally {
     await conn.close();
   }
