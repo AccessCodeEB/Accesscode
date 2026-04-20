@@ -1,6 +1,8 @@
 import { Router } from "express";
 import * as AdminController from "../controllers/administradores.controller.js";
 import { verifyToken, checkRole } from "../middleware/auth.js";
+import { uploadProfilePhoto } from "../middleware/uploadProfilePhoto.js";
+import { adminSelfOrSuper } from "../middleware/adminSelfOrSuper.js";
 
 const router = Router();
 
@@ -9,6 +11,17 @@ router.post("/login", AdminController.login);
 
 // Protegidas — requieren token válido
 router.get("/",                     verifyToken, checkRole(1),    AdminController.getAll);
+router.post(
+  "/:idAdmin/foto-perfil",
+  verifyToken,
+  adminSelfOrSuper,
+  (req, _res, next) => {
+    req._profileFilePrefix = `adm-${req.params.idAdmin}`;
+    next();
+  },
+  uploadProfilePhoto.single("foto"),
+  AdminController.uploadFotoPerfil
+);
 router.get("/:idAdmin",             verifyToken,                  AdminController.getById);
 router.post("/",                    verifyToken, checkRole(1),    AdminController.create);
 router.put("/:idAdmin",             verifyToken, checkRole(1),    AdminController.update);

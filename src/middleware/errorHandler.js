@@ -47,6 +47,10 @@ export function errorHandler(err, req, res, _next) {
     code       = statusToDefaultCode(statusCode);
     message    = err.message;
     details    = err.details;
+  } else if (err?.code === "LIMIT_FILE_SIZE") {
+    statusCode = 400;
+    code       = "FILE_TOO_LARGE";
+    message    = "El archivo supera el tamaño máximo permitido (2 MB).";
   } else {
     const mapped = mapOracleError(err);
     if (mapped) {

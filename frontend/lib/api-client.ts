@@ -72,6 +72,47 @@ async function request<T>(
   }
 }
 
+async function requestFormData<T>(path: string, form: FormData, init: RequestInit = {}): Promise<T> {
+  const url = `${BASE_URL}${path}`
+  const token = tokenStorage.get()
+
+  const res = await fetch(url, {
+    ...init,
+    method: "POST",
+    body: form,
+    credentials: "include",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...init.headers,
+    },
+  })
+
+  const text = await res.text().catch(() => "")
+
+  if (!res.ok) {
+    let message = text
+    try {
+      const parsed = JSON.parse(text) as { message?: string; error?: string }
+      if (typeof parsed?.message === "string") message = parsed.message
+      else if (typeof parsed?.error === "string") message = parsed.error
+    } catch {
+      /* usar texto crudo */
+    }
+    throw new ApiError(res.status, message)
+  }
+
+  if (res.status === 204) return undefined as T
+
+  const trimmed = text.trim()
+  if (trimmed === "") return undefined as T
+
+  try {
+    return JSON.parse(trimmed) as T
+  } catch {
+    throw new ApiError(502, `Respuesta no JSON desde ${url}`)
+  }
+}
+
 export const apiClient = {
   get: <T>(path: string, init?: RequestInit) =>
     request<T>(path, { ...init, method: "GET" }),
@@ -87,4 +128,7 @@ export const apiClient = {
 
   delete: <T>(path: string, init?: RequestInit) =>
     request<T>(path, { ...init, method: "DELETE" }),
+
+  postFormData: <T>(path: string, form: FormData, init?: RequestInit) =>
+    requestFormData<T>(path, form, init),
 }

@@ -29,7 +29,8 @@ export async function findAll() {
                   SELECT 1 FROM CREDENCIALES c WHERE c.CURP = b.CURP
                 ) THEN 'Vencida'
                 ELSE 'Sin membresia'
-              END AS MEMBRESIA_ESTATUS
+              END AS MEMBRESIA_ESTATUS,
+              b.FOTO_PERFIL_URL
        FROM BENEFICIARIOS b
        ORDER BY b.APELLIDO_PATERNO`
     );
@@ -184,6 +185,19 @@ export async function update(curp, data) {
       { autoCommit: true }
     );
     return result.rowsAffected ?? 0;
+  } finally {
+    await conn.close();
+  }
+}
+
+export async function updateFotoPerfilUrl(curp, fotoPerfilUrl) {
+  const conn = await getConnection();
+  try {
+    await conn.execute(
+      `UPDATE BENEFICIARIOS SET FOTO_PERFIL_URL = :fotoPerfilUrl WHERE CURP = :curp`,
+      { curp, fotoPerfilUrl },
+      { autoCommit: true }
+    );
   } finally {
     await conn.close();
   }

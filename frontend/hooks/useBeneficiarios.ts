@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { toast } from "sonner"
 import {
   getBeneficiarios,
@@ -9,6 +9,8 @@ import {
   updateEstatusBeneficiario,
   deactivateBeneficiario,
   deleteBeneficiario,
+  uploadBeneficiarioFotoPerfil,
+  deleteBeneficiarioFotoPerfil,
   type Beneficiario,
 } from "@/services/beneficiarios"
 
@@ -273,6 +275,31 @@ export function useBeneficiarios() {
   const [saveError, setSaveError]                 = useState<string | null>(null)
   const [editErrors, setEditErrors]               = useState<Record<string, string>>({})
   const [altaErrors, setAltaErrors]               = useState<Record<string, string>>({})
+  const [fotoUploading, setFotoUploading]         = useState(false)
+  const [altaFotoPreview, setAltaFotoPreview]     = useState<string | null>(null)
+  const altaFotoFileRef                         = useRef<File | null>(null)
+  /** Por CURP/folio: incrementa al subir foto para evitar caché del navegador */
+  const [fotoBustByCurp, setFotoBustByCurp]     = useState<Record<string, number>>({})
+
+  const resetAltaFoto = useCallback(() => {
+    setAltaFotoPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return null
+    })
+    altaFotoFileRef.current = null
+  }, [])
+
+  const handleAltaFotoSelected = useCallback((file: File) => {
+    altaFotoFileRef.current = file
+    setAltaFotoPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return URL.createObjectURL(file)
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!showAltaDialog) resetAltaFoto()
+  }, [showAltaDialog, resetAltaFoto])
 
   useEffect(() => {
     getBeneficiarios()
@@ -312,6 +339,63 @@ export function useBeneficiarios() {
     setEditForm((prev) => ({ ...prev, [field]: value }))
     if (editErrors[field as string])
       setEditErrors((prev) => { const e = { ...prev }; delete e[field as string]; return e })
+  }
+
+  function matchesCurp(b: Beneficiario, curp: string) {
+    const c = curp.toUpperCase()
+    return (b.folio ?? "").toUpperCase() === c || (b.curp ?? "").toUpperCase() === c
+  }
+
+  async function handleUploadFotoBeneficiario(curp: string, file: File) {
+    const c = curp.trim().toUpperCase()
+    setFotoUploading(true)
+    try {
+      const { fotoPerfilUrl } = await uploadBeneficiarioFotoPerfil(c, file)
+      setBeneficiarios((prev) =>
+        prev.map((b) => (matchesCurp(b, c) ? { ...b, fotoPerfilUrl } : b))
+      )
+      setSelectedBeneficiario((prev) =>
+        prev && matchesCurp(prev, c) ? { ...prev, fotoPerfilUrl } : prev
+      )
+      setEditForm((prev) => {
+        const pid = String(prev.curp ?? prev.folio ?? "").trim().toUpperCase()
+        if (!pid || pid !== c) return prev
+        return { ...prev, fotoPerfilUrl }
+      })
+      setFotoBustByCurp((prev) => ({ ...prev, [c]: (prev[c] ?? 0) + 1 }))
+      toast.success("Foto de perfil actualizada", { duration: 2800, className: TOAST_OK })
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "No se pudo subir la foto")
+    } finally {
+      setFotoUploading(false)
+    }
+  }
+
+  async function handleDeleteFotoBeneficiario(curp: string): Promise<boolean> {
+    const c = curp.trim().toUpperCase()
+    setFotoUploading(true)
+    try {
+      await deleteBeneficiarioFotoPerfil(c)
+      setBeneficiarios((prev) =>
+        prev.map((b) => (matchesCurp(b, c) ? { ...b, fotoPerfilUrl: null } : b))
+      )
+      setSelectedBeneficiario((prev) =>
+        prev && matchesCurp(prev, c) ? { ...prev, fotoPerfilUrl: null } : prev
+      )
+      setEditForm((prev) => {
+        const pid = String(prev.curp ?? prev.folio ?? "").trim().toUpperCase()
+        if (!pid || pid !== c) return prev
+        return { ...prev, fotoPerfilUrl: null }
+      })
+      setFotoBustByCurp((prev) => ({ ...prev, [c]: (prev[c] ?? 0) + 1 }))
+      toast.success("Foto de perfil eliminada", { duration: 2800, className: TOAST_OK })
+      return true
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "No se pudo eliminar la foto")
+      return false
+    } finally {
+      setFotoUploading(false)
+    }
   }
 
   async function handleSaveEdit() {
@@ -434,9 +518,22 @@ export function useBeneficiarios() {
         estado:   altaForm.estado,
         membresiaEstatus: "Sin membresia",
       })
+      const curpUpper = altaForm.curp.toUpperCase()
+      let fotoPerfilUrl: string | undefined
+      const pendingFoto = altaFotoFileRef.current
+      if (pendingFoto) {
+        try {
+          const r = await uploadBeneficiarioFotoPerfil(curpUpper, pendingFoto)
+          fotoPerfilUrl = r.fotoPerfilUrl
+          setFotoBustByCurp((prev) => ({ ...prev, [curpUpper]: (prev[curpUpper] ?? 0) + 1 }))
+        } catch (err: unknown) {
+          toast.error(err instanceof Error ? err.message : "No se pudo subir la foto de perfil")
+        }
+      }
+      resetAltaFoto()
       const nuevo: Beneficiario = {
-        folio:              altaForm.curp.toUpperCase(),
-        curp:               altaForm.curp.toUpperCase(),
+        folio:              curpUpper,
+        curp:               curpUpper,
         nombres:            altaForm.nombres.trim(),
         apellidoPaterno:    altaForm.apellidoPaterno.trim(),
         apellidoMaterno:    altaForm.apellidoMaterno.trim(),
@@ -462,6 +559,7 @@ export function useBeneficiarios() {
         tipo:        "",
         estatus:     "Activo",
         membresiaEstatus: "Sin membresia",
+        fotoPerfilUrl:    fotoPerfilUrl ?? undefined,
       }
       setBeneficiarios((prev) => [...prev, nuevo])
       setAltaForm(ALTA_FORM_INICIAL)
@@ -490,6 +588,7 @@ export function useBeneficiarios() {
     selectedBeneficiario, setSelectedBeneficiario,
     editForm,
     isSaving,
+    fotoUploading,
     confirmDelete, setConfirmDelete,
     confirmEditDelete, setConfirmEditDelete,
     saveError,
@@ -507,5 +606,10 @@ export function useBeneficiarios() {
     handleHardDelete,
     handleAltaChange,
     handleAltaSubmit,
+    handleUploadFotoBeneficiario,
+    handleDeleteFotoBeneficiario,
+    altaFotoPreview,
+    handleAltaFotoSelected,
+    fotoBustByCurp,
   }
 }

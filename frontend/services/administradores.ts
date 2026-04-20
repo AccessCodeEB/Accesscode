@@ -23,6 +23,7 @@ export interface Admin {
   activo:         number
   fechaCreacion:  string
   nombreRol:      string
+  fotoPerfilUrl?: string | null
 }
 
 export interface UpdateAdminBody {
@@ -46,6 +47,16 @@ export function updateAdmin(id: number, body: UpdateAdminBody) {
 
 export function changePassword(id: number, body: ChangePasswordBody) {
   return apiClient.patch<{ message: string }>(`/administradores/${id}/password`, body)
+}
+
+/** POST multipart /administradores/:id/foto-perfil — campo de archivo: `foto` */
+export function uploadAdminFotoPerfil(idAdmin: number, file: File) {
+  const fd = new FormData()
+  fd.append("foto", file)
+  return apiClient.postFormData<{ message: string; fotoPerfilUrl: string }>(
+    `/administradores/${idAdmin}/foto-perfil`,
+    fd
+  )
 }
 
 /**

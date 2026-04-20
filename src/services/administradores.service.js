@@ -3,7 +3,8 @@ import jwt from "jsonwebtoken";
 import * as AdminModel from "../models/administradores.model.js";
 import * as RolesModel from "../models/roles.model.js";
 import { AppError } from "../middleware/errorHandler.js";
-import { notFound, badRequest, conflict, HttpError } from "../utils/httpErrors.js";
+import { notFound, badRequest, conflict, HttpError, forbidden } from "../utils/httpErrors.js";
+import { publicPathForStoredFile, unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
 
 const SALT_ROUNDS = 10;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -156,4 +157,21 @@ export async function deactivate(idAdmin) {
   const admin = await AdminModel.findById(idAdmin);
   if (!admin) throw notFound(`Administrador con id ${idAdmin} no encontrado`);
   await AdminModel.deactivate(idAdmin);
+}
+
+/** Tras multer: `filename` es el nombre en disco. `caller` = req.user del JWT */
+export async function updateFotoPerfilByUpload(idAdmin, filename, caller) {
+  if (caller.idAdmin !== idAdmin && caller.idRol !== 1) {
+    throw forbidden("No autorizado para modificar este perfil");
+  }
+
+  const admin = await AdminModel.findById(idAdmin);
+  if (!admin) throw notFound(`Administrador con id ${idAdmin} no encontrado`);
+
+  const prev = admin.FOTO_PERFIL_URL;
+  const publicPath = publicPathForStoredFile(filename);
+  await AdminModel.updateFotoPerfilUrl(idAdmin, publicPath);
+  unlinkOldProfileIfSafe(prev);
+
+  return { fotoPerfilUrl: publicPath };
 }

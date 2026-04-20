@@ -2,7 +2,7 @@ import { getConnection } from "../config/db.js";
 
 const SELECT_CON_ROL = `
   SELECT a.ID_ADMIN, a.ID_ROL, a.NOMBRE_COMPLETO, a.EMAIL,
-         a.ACTIVO, a.FECHA_CREACION, r.NOMBRE_ROL
+         a.ACTIVO, a.FECHA_CREACION, a.FOTO_PERFIL_URL, r.NOMBRE_ROL
   FROM   ADMINISTRADORES a
   JOIN   ROLES r ON r.ID_ROL = a.ID_ROL
 `;
@@ -86,6 +86,19 @@ export async function updatePassword(idAdmin, passwordHash) {
     await conn.execute(
       `UPDATE ADMINISTRADORES SET PASSWORD_HASH = :passwordHash WHERE ID_ADMIN = :idAdmin`,
       { passwordHash, idAdmin },
+      { autoCommit: true }
+    );
+  } finally {
+    await conn.close();
+  }
+}
+
+export async function updateFotoPerfilUrl(idAdmin, fotoPerfilUrl) {
+  const conn = await getConnection();
+  try {
+    await conn.execute(
+      `UPDATE ADMINISTRADORES SET FOTO_PERFIL_URL = :fotoPerfilUrl WHERE ID_ADMIN = :idAdmin`,
+      { idAdmin, fotoPerfilUrl },
       { autoCommit: true }
     );
   } finally {

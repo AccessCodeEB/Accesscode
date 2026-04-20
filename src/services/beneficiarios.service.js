@@ -1,6 +1,7 @@
 import * as BeneficiarioModel from "../models/beneficiarios.model.js";
 import * as MembresiasModel from "../models/membresias.model.js";
 import { badRequest, notFound, conflict } from "../utils/httpErrors.js";
+import { publicPathForStoredFile, unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
 
 const CURP_REGEX   = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/;
 const EMAIL_REGEX  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -168,4 +169,39 @@ export async function deactivate(curp) {
 
   await BeneficiarioModel.deactivate(curp);
   await MembresiasModel.cancelarPorCurp(curp);
+}
+
+/** Tras multer: `filename` es el nombre en disco bajo uploads/profiles */
+export async function updateFotoPerfilByUpload(curpParam, filename) {
+  const curp = String(curpParam).trim().toUpperCase();
+  validarCurp(curp);
+
+  const existente = await BeneficiarioModel.findById(curp);
+  if (!existente) {
+    throw notFound(`No existe un beneficiario con la CURP ${curp}`, "BENEFICIARIO_NOT_FOUND");
+  }
+
+  const prev = existente.FOTO_PERFIL_URL ?? existente.fotoPerfilUrl;
+  const publicPath = publicPathForStoredFile(filename);
+  await BeneficiarioModel.updateFotoPerfilUrl(curp, publicPath);
+  unlinkOldProfileIfSafe(prev);
+
+  return { fotoPerfilUrl: publicPath };
+}
+
+/** Quita la foto en BD y borra el archivo bajo uploads/profiles si aplica */
+export async function clearFotoPerfil(curpParam) {
+  const curp = String(curpParam).trim().toUpperCase();
+  validarCurp(curp);
+
+  const existente = await BeneficiarioModel.findById(curp);
+  if (!existente) {
+    throw notFound(`No existe un beneficiario con la CURP ${curp}`, "BENEFICIARIO_NOT_FOUND");
+  }
+
+  const prev = existente.FOTO_PERFIL_URL ?? existente.fotoPerfilUrl;
+  await BeneficiarioModel.updateFotoPerfilUrl(curp, null);
+  unlinkOldProfileIfSafe(prev);
+
+  return { fotoPerfilUrl: null };
 }

@@ -1,11 +1,11 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import {
   Search, Plus, Eye, Edit, CreditCard, FileText, MapPin,
-  Download, CheckCircle, XCircle, AlertTriangle, User, Users,
+  Download, CheckCircle, XCircle, AlertTriangle, User, Users, Loader2,
   Phone, HeartPulse, Stethoscope, ClipboardList, Mail,
-  Calendar, Hash, Droplet, Activity, ArrowLeft,
+  Calendar, Hash, Droplet, Activity, ArrowLeft, Save, Trash2
 } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
@@ -14,14 +14,25 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { useBeneficiarios } from "@/hooks/useBeneficiarios"
 import type { Beneficiario } from "@/services/beneficiarios"
 import { cn } from "@/lib/utils"
+import { resolvePublicUploadUrl } from "@/lib/media-url"
+import { ProfilePhotoUpload } from "@/components/profile-photo-upload"
 
 // ─── UI Helpers ───────────────────────────────────────────────────────────────
 
@@ -51,6 +62,20 @@ function getEstatusBadge(estatus: string) {
           Sin membresía
         </span>
       )
+  }
+}
+
+/** Anillo del avatar en tarjetas del grid: verde / amarillo / rojo según estatus (opacidad suave). */
+function tarjetaAvatarRing(estatus: string) {
+  switch (estatus) {
+    case "Activo":
+      return "ring-success/50"
+    case "Inactivo":
+      return "ring-warning/50"
+    case "Baja":
+      return "ring-destructive/50"
+    default:
+      return "ring-muted-foreground/35"
   }
 }
 
@@ -97,7 +122,7 @@ function DetailGroup({ title, icon: Icon, children }: { title: string; icon: Rea
   const hasContent = React.Children.toArray(children).some((c) => React.isValidElement(c))
   if (!hasContent) return null
   return (
-    <div className="rounded-2xl border border-border/50 bg-muted/20 p-6 shadow-sm transition-all hover:bg-muted/30">
+    <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-center gap-2.5 mb-5 border-b border-border/50 pb-3">
         <div className="p-1.5 bg-background border border-border/50 rounded-lg text-primary shadow-sm">
           <Icon className="size-4" />
@@ -111,7 +136,7 @@ function DetailGroup({ title, icon: Icon, children }: { title: string; icon: Rea
 
 function SectionCard({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-border/60 bg-background p-6 shadow-sm">
+    <div className="rounded-xl border border-border/60 bg-background p-6 shadow-sm mb-6">
       <div className="flex items-center gap-2.5 mb-5 border-b border-border/40 pb-3">
         <Icon className="size-5 text-primary" />
         <h4 className="text-[14px] font-bold text-foreground uppercase tracking-widest">{title}</h4>
@@ -130,15 +155,11 @@ function FieldWrap({ error, className, children }: { error?: string; className?:
   )
 }
 
-/** Etiqueta de campo obligatorio en alta (asterisco) */
 function LabelReq({ htmlFor, children }: { htmlFor?: string; children: React.ReactNode }) {
   return (
     <Label htmlFor={htmlFor}>
       {children}
-      <span className="text-destructive" aria-hidden>
-        {" "}
-        *
-      </span>
+      <span className="text-destructive" aria-hidden> *</span>
     </Label>
   )
 }
@@ -157,6 +178,7 @@ function IconInput({ icon: Icon, alignTop, children }: { icon: React.ElementType
 export function BeneficiariosSection() {
   const [overlayAction, setOverlayAction] = useState<"baja" | "eliminar" | null>(null)
   const [credencialBeneficiario, setCredencialBeneficiario] = useState<Beneficiario | null>(null)
+  const [removeFotoConfirmOpen, setRemoveFotoConfirmOpen] = useState(false)
 
   const {
     beneficiarios, loading, error,
@@ -170,8 +192,19 @@ export function BeneficiariosSection() {
     editForm, altaForm, altaErrors, setAltaErrors,
     isSaving, saveError, setSaveError, editErrors,
     openEdit, handleEditChange, handleSaveEdit, handleEditDelete,
-    handleAltaChange, handleAltaSubmit, handleDarDeBaja
+    handleAltaChange, handleAltaSubmit, handleDarDeBaja,
+    fotoUploading, handleUploadFotoBeneficiario, handleDeleteFotoBeneficiario,
+    altaFotoPreview, handleAltaFotoSelected,
+    fotoBustByCurp,
   } = useBeneficiarios()
+
+  useEffect(() => {
+    if (!credencialBeneficiario) return
+    const key = (credencialBeneficiario.curp ?? credencialBeneficiario.folio).toUpperCase()
+    const row = beneficiarios.find((b) => (b.curp ?? b.folio).toUpperCase() === key)
+    if (!row || row.fotoPerfilUrl === credencialBeneficiario.fotoPerfilUrl) return
+    setCredencialBeneficiario(row)
+  }, [beneficiarios, credencialBeneficiario])
 
   if (loading) return (
     <div className="flex h-64 items-center justify-center">
@@ -244,10 +277,26 @@ export function BeneficiariosSection() {
         {filtered.map((b) => {
           const initials = `${b.nombres[0] || ""}${b.apellidoPaterno[0] || ""}`
           const nombre = `${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno}`
+          const curpKey = (b.curp ?? b.folio).toUpperCase()
+          const cardPhoto = resolvePublicUploadUrl(b.fotoPerfilUrl ?? undefined, fotoBustByCurp[curpKey])
           return (
             <Card key={b.folio} className="flex flex-col items-center text-center border-border/60 shadow-sm hover:shadow-md transition-shadow p-6 rounded-2xl">
-              <div className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary text-lg font-bold ring-4 ring-background shadow-sm mb-2">
-                {initials}
+              <div
+                className={cn(
+                  "mb-2 flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-primary text-lg font-bold ring-4 shadow-sm",
+                  tarjetaAvatarRing(b.estatus)
+                )}
+              >
+                {cardPhoto ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={cardPhoto}
+                    alt=""
+                    className={cn("size-full object-cover", b.estatus === "Baja" && "grayscale")}
+                  />
+                ) : (
+                  initials
+                )}
               </div>
               <p className="text-sm font-semibold text-primary/80 leading-none">{b.folio}</p>
               <h3 className="text-sm font-semibold text-foreground leading-tight line-clamp-1 mt-0.5">{nombre}</h3>
@@ -255,8 +304,7 @@ export function BeneficiariosSection() {
                 <MapPin className="size-3 shrink-0" />
                 <span className="text-xs truncate">{b.ciudad}, {b.estado}</span>
               </div>
-              <div className="mt-2">{getEstatusBadge(b.estatus)}</div>
-              <div className="mt-6 flex items-center justify-between gap-3 w-full">
+              <div className="mt-5 flex items-center justify-between gap-3 w-full">
                 <Button
                   variant="outline" size="sm"
                   className="flex-1 h-8 text-xs text-muted-foreground hover:text-foreground shadow-sm rounded-lg"
@@ -285,15 +333,27 @@ export function BeneficiariosSection() {
           showCloseButton={false}
           className="max-w-4xl w-[calc(100vw-2rem)] max-h-[min(90vh,900px)] flex flex-col p-0 gap-0 overflow-hidden border-none shadow-2xl sm:rounded-3xl"
         >
-          {selectedBeneficiario && (
+          {selectedBeneficiario && (() => {
+            const expCurp = (selectedBeneficiario.curp ?? selectedBeneficiario.folio).toUpperCase()
+            const expBust = fotoBustByCurp[expCurp] ?? 0
+            return (
             <>
               {/* Encabezado del Expediente */}
               <div className="shrink-0 bg-background border-b border-border/40 px-6 py-6 sm:px-8">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex min-w-0 flex-1 items-center gap-4">
-                    <div className="flex size-16 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xl font-bold ring-4 ring-background shadow-sm">
-                      {selectedBeneficiario.nombres[0]}{selectedBeneficiario.apellidoPaterno[0]}
-                    </div>
+                    <ProfilePhotoUpload
+                      variant="detail"
+                      size="lg"
+                      imageRevision={expBust}
+                      fotoPerfilUrl={selectedBeneficiario.fotoPerfilUrl}
+                      fallbackText={`${selectedBeneficiario.nombres[0] || ""}${selectedBeneficiario.apellidoPaterno[0] || ""}`}
+                      uploading={fotoUploading}
+                      disabled={selectedBeneficiario.estatus === "Baja"}
+                      grayscale={selectedBeneficiario.estatus === "Baja"}
+                      onFileSelected={(file) => handleUploadFotoBeneficiario(expCurp, file)}
+                    />
+
                     <div className="min-w-0 flex-1">
                       <DialogTitle className="text-2xl font-bold text-foreground">
                         {selectedBeneficiario.nombres} {selectedBeneficiario.apellidoPaterno} {selectedBeneficiario.apellidoMaterno}
@@ -321,8 +381,8 @@ export function BeneficiariosSection() {
                 </div>
               </div>
 
-              {/* Contenido del Expediente — mismas secciones y orden que «Editar» */}
-              <div className="flex-1 min-h-0 overflow-y-auto bg-muted/10 px-6 py-6 sm:px-8 scrollbar-hide">
+              {/* Contenido del Expediente */}
+              <div className="flex-1 min-h-0 overflow-y-auto bg-background px-6 py-6 sm:px-8 scrollbar-hide">
                 <div className="space-y-6 pb-2">
                   <DetailGroup title="Información Personal" icon={User}>
                     <DetailField label="Nombres" value={selectedBeneficiario.nombres} />
@@ -385,11 +445,12 @@ export function BeneficiariosSection() {
                 </Button>
               </div>
             </>
-          )}
+            )
+          })()}
         </DialogContent>
       </Dialog>
 
-      {/* ── Dialog: Credencial digital (vista previa, sin lógica aún) ─────── */}
+      {/* ── Dialog: Credencial digital (vista previa) ─────────────────────── */}
       <Dialog
         open={credencialBeneficiario !== null}
         onOpenChange={(open) => {
@@ -397,7 +458,13 @@ export function BeneficiariosSection() {
         }}
       >
         <DialogContent className="max-w-md w-[calc(100vw-2rem)] gap-0 overflow-hidden border-none p-0 shadow-2xl sm:rounded-2xl">
-          {credencialBeneficiario && (
+          {credencialBeneficiario && (() => {
+            const credKey = (credencialBeneficiario.curp ?? credencialBeneficiario.folio).toUpperCase()
+            const credPhoto = resolvePublicUploadUrl(
+              credencialBeneficiario.fotoPerfilUrl ?? undefined,
+              fotoBustByCurp[credKey]
+            )
+            return (
             <>
               <div className="border-b border-border/50 bg-primary/5 px-6 py-4">
                 <DialogHeader className="gap-1 text-left">
@@ -420,9 +487,23 @@ export function BeneficiariosSection() {
                     </span>
                   </div>
                   <div className="flex gap-4 p-4">
-                    <div className="flex size-20 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-lg font-bold text-primary ring-2 ring-primary/15">
-                      {(credencialBeneficiario.nombres[0] || "")}
-                      {(credencialBeneficiario.apellidoPaterno[0] || "")}
+                    <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10 text-lg font-bold text-primary ring-2 ring-primary/15">
+                      {credPhoto ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={credPhoto}
+                          alt=""
+                          className={cn(
+                            "size-full object-cover",
+                            credencialBeneficiario.estatus === "Baja" && "grayscale"
+                          )}
+                        />
+                      ) : (
+                        <>
+                          {(credencialBeneficiario.nombres[0] || "")}
+                          {(credencialBeneficiario.apellidoPaterno[0] || "")}
+                        </>
+                      )}
                     </div>
                     <div className="min-w-0 flex-1 space-y-1">
                       <p className="text-sm font-bold leading-tight text-foreground line-clamp-2">
@@ -458,7 +539,8 @@ export function BeneficiariosSection() {
                 </div>
               </div>
             </>
-          )}
+            )
+          })()}
         </DialogContent>
       </Dialog>
 
@@ -471,13 +553,39 @@ export function BeneficiariosSection() {
               <DialogDescription>Ingresa los datos para registrar un nuevo beneficiario en el sistema.</DialogDescription>
             </DialogHeader>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-6 py-8 space-y-6 bg-muted/10">
+          <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-6 py-8 bg-muted/10">
             {saveError && (
-              <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive flex items-center gap-2">
+              <div className="mb-6 rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive flex items-center gap-2">
                 <XCircle className="size-4 shrink-0" />{saveError}
               </div>
             )}
+            
             <SectionCard title="Información Personal" icon={User}>
+              {/* DISEÑO MEJORADO: Foto de Perfil en Crear */}
+              <div className="mb-8 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 p-5 transition-colors hover:border-primary/40 hover:bg-primary/10">
+                <div className="flex flex-col items-center gap-5 sm:flex-row sm:justify-start">
+                  <div className="shrink-0">
+                    <ProfilePhotoUpload
+                      variant="form"
+                      size="md"
+                      previewSrc={altaFotoPreview}
+                      fotoPerfilUrl={null}
+                      fallbackText={`${altaForm.nombres?.[0] ?? "?"}${altaForm.apellidoPaterno?.[0] ?? ""}`}
+                      uploading={isSaving}
+                      disabled={isSaving}
+                      onFileSelected={handleAltaFotoSelected}
+                    />
+                  </div>
+                  <div className="text-center sm:text-left space-y-1">
+                    <h4 className="text-sm font-bold text-foreground">Foto de perfil</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Selecciona una imagen clara del beneficiario. <br className="hidden sm:block" />
+                      Formatos soportados: JPEG, PNG o WebP (máx. 2 MB).
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <FieldWrap error={altaErrors?.nombres}>
                   <LabelReq htmlFor="alta-nombres">Nombres</LabelReq>
@@ -487,7 +595,6 @@ export function BeneficiariosSection() {
                     onChange={(e) => handleAltaChange("nombres", e.target.value)}
                     className={`bg-background ${altaErrors?.nombres ? "border-destructive" : ""}`}
                     placeholder="Ej. Juan Carlos"
-                    autoComplete="given-name"
                   />
                 </FieldWrap>
                 <FieldWrap error={altaErrors?.apellidoPaterno}>
@@ -498,7 +605,6 @@ export function BeneficiariosSection() {
                     onChange={(e) => handleAltaChange("apellidoPaterno", e.target.value)}
                     className={`bg-background ${altaErrors?.apellidoPaterno ? "border-destructive" : ""}`}
                     placeholder="Ej. García"
-                    autoComplete="family-name"
                   />
                 </FieldWrap>
                 <FieldWrap error={altaErrors?.apellidoMaterno}>
@@ -509,7 +615,6 @@ export function BeneficiariosSection() {
                     onChange={(e) => handleAltaChange("apellidoMaterno", e.target.value)}
                     className={`bg-background ${altaErrors?.apellidoMaterno ? "border-destructive" : ""}`}
                     placeholder="Ej. López"
-                    autoComplete="additional-name"
                   />
                 </FieldWrap>
                 <FieldWrap error={altaErrors?.curp}>
@@ -522,8 +627,7 @@ export function BeneficiariosSection() {
                       onChange={(e) => handleAltaChange("curp", e.target.value.toUpperCase())}
                       className={`pl-9 bg-background ${altaErrors?.curp ? "border-destructive" : ""}`}
                       maxLength={18}
-                      placeholder="Ej. ABCD900101HDFRRN09"
-                      autoComplete="off"
+                      placeholder="18 caracteres"
                     />
                   </div>
                 </FieldWrap>
@@ -537,7 +641,6 @@ export function BeneficiariosSection() {
                       value={altaForm.fechaNacimiento ?? ""}
                       onChange={(e) => handleAltaChange("fechaNacimiento", e.target.value)}
                       className={`pl-9 bg-background ${altaErrors?.fechaNacimiento ? "border-destructive" : ""}`}
-                      title="Selecciona la fecha de nacimiento"
                     />
                   </div>
                 </FieldWrap>
@@ -833,7 +936,7 @@ export function BeneficiariosSection() {
             </DialogHeader>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-6 py-8 space-y-6 bg-muted/10">
+          <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-6 pt-5 pb-8 space-y-6 bg-muted/10">
             {saveError && (
               <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive flex items-center gap-2">
                 <XCircle className="size-4 shrink-0" />{saveError}
@@ -872,7 +975,6 @@ export function BeneficiariosSection() {
                     </p>
                   </div>
 
-                  {/* Switch UI mejorado */}
                   <div className="flex items-center gap-3 shrink-0">
                     <span className={`text-sm font-medium transition-colors ${editForm.estatus === "Inactivo" ? "text-foreground" : "text-muted-foreground"}`}>
                       Inactivo
@@ -892,6 +994,42 @@ export function BeneficiariosSection() {
             {/* ────────────────────────────────────── */}
 
             <SectionCard title="Información Personal" icon={User}>
+              {/* DISEÑO MEJORADO: Foto de Perfil en Editar */}
+              <div className="mb-8 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 p-5 transition-colors hover:border-primary/40 hover:bg-primary/10">
+                <div className="flex flex-col items-center gap-5 sm:flex-row sm:justify-start">
+                  <div className="shrink-0">
+                    <ProfilePhotoUpload
+                      variant="form"
+                      size="md"
+                      imageRevision={fotoBustByCurp[String(editForm.curp ?? editForm.folio ?? "").toUpperCase()] || 0}
+                      fotoPerfilUrl={editForm.fotoPerfilUrl}
+                      fallbackText={`${editForm.nombres?.[0] ?? ""}${editForm.apellidoPaterno?.[0] ?? ""}`}
+                      uploading={fotoUploading}
+                      disabled={editForm.estatus === "Baja"}
+                      grayscale={editForm.estatus === "Baja"}
+                      onFileSelected={(file) =>
+                        handleUploadFotoBeneficiario(
+                          String(editForm.curp ?? editForm.folio ?? "").toUpperCase(),
+                          file
+                        )
+                      }
+                      onRemovePhotoRequest={
+                        editForm.estatus !== "Baja" && editForm.fotoPerfilUrl
+                          ? () => setRemoveFotoConfirmOpen(true)
+                          : undefined
+                      }
+                    />
+                  </div>
+                  <div className="text-center sm:text-left space-y-1">
+                    <h4 className="text-sm font-bold text-foreground">Actualizar Foto de perfil</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Haz clic en la imagen o arrastra una nueva. <br className="hidden sm:block" />
+                      Formatos soportados: JPEG, PNG o WebP (máx. 2 MB).
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <FieldWrap error={editErrors?.nombres}>
                   <Label>Nombres</Label>
@@ -1089,6 +1227,44 @@ export function BeneficiariosSection() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={removeFotoConfirmOpen} onOpenChange={setRemoveFotoConfirmOpen}>
+        <AlertDialogContent className="w-full max-w-xs gap-3 p-5 sm:max-w-xs">
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar foto de perfil?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se borrará definitivamente. Podrás subir otra foto después si lo deseas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={fotoUploading}>Cancelar</AlertDialogCancel>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={fotoUploading}
+              className="gap-2 text-white [&_svg]:text-white"
+              onClick={async () => {
+                const curp = String(editForm.curp ?? editForm.folio ?? "").trim().toUpperCase()
+                if (!curp) return
+                const ok = await handleDeleteFotoBeneficiario(curp)
+                if (ok) setRemoveFotoConfirmOpen(false)
+              }}
+            >
+              {fotoUploading ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Eliminando…
+                </>
+              ) : (
+                <>
+                  <Trash2 className="size-4" />
+                  Eliminar foto
+                </>
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

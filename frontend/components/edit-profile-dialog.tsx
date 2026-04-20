@@ -19,8 +19,11 @@ import {
   getAdmin,
   updateAdmin,
   changePassword,
+  uploadAdminFotoPerfil,
   type Admin,
 } from "@/services/administradores"
+import { ProfilePhotoUpload } from "@/components/profile-photo-upload"
+import { toast } from "sonner"
 
 // ── Tipos internos ──────────────────────────────────────────────────────────
 
@@ -81,10 +84,14 @@ export function EditProfileDialog({
   const [showCurrent, setShowCurrent] = useState(false)
   const [showNew,     setShowNew]     = useState(false)
 
+  const [fotoUploading, setFotoUploading] = useState(false)
+  const [adminFotoRevision, setAdminFotoRevision] = useState(0)
+
   // ── Cargar datos del admin cuando se abre el diálogo ───────────────
   useEffect(() => {
     if (!open || adminId == null) return
 
+    setAdminFotoRevision(0)
     setSaveOk(false)
     setSaveError(null)
     setPwOk(false)
@@ -225,6 +232,42 @@ export function EditProfileDialog({
                 <div className="mb-4 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                   <User className="size-3.5" />
                   Perfil
+                </div>
+
+                <div className="mb-8 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 p-5 transition-colors hover:border-primary/40 hover:bg-primary/10">
+                  <div className="flex flex-col items-center gap-5 sm:flex-row sm:justify-start">
+                    <div className="shrink-0">
+                      <ProfilePhotoUpload
+                        variant="form"
+                        size="md"
+                        imageRevision={adminFotoRevision}
+                        fotoPerfilUrl={admin.fotoPerfilUrl}
+                        fallbackText={admin.nombreCompleto.slice(0, 2)}
+                        uploading={fotoUploading}
+                        disabled={saving}
+                        onFileSelected={async (file) => {
+                          setFotoUploading(true)
+                          try {
+                            const r = await uploadAdminFotoPerfil(admin.idAdmin, file)
+                            setAdmin((p) => (p ? { ...p, fotoPerfilUrl: r.fotoPerfilUrl } : p))
+                            setAdminFotoRevision((n) => n + 1)
+                            toast.success("Foto de perfil actualizada")
+                          } catch (e: unknown) {
+                            toast.error(e instanceof Error ? e.message : "No se pudo subir la foto")
+                          } finally {
+                            setFotoUploading(false)
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="text-center sm:text-left space-y-1">
+                      <h4 className="text-sm font-bold text-foreground">Actualizar Foto de perfil</h4>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Haz clic en la imagen o arrastra una nueva. <br className="hidden sm:block" />
+                        Formatos soportados: JPEG, PNG o WebP (máx. 2 MB).
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-4">

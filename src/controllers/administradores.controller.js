@@ -1,5 +1,6 @@
 import * as AdminService from "../services/administradores.service.js";
 import { toCamel } from "../utils/dbTransform.js";
+import { badRequest } from "../utils/httpErrors.js";
 
 function mapAdminPublic(row) {
   if (!row) return null;
@@ -12,6 +13,7 @@ function mapAdminPublic(row) {
     activo:         a.activo,
     fechaCreacion:  a.fechaCreacion,
     nombreRol:      a.nombreRol,
+    fotoPerfilUrl:  a.fotoPerfilUrl ?? null,
   };
 }
 
@@ -78,6 +80,21 @@ export async function deactivate(req, res, next) {
   try {
     await AdminService.deactivate(Number(req.params.idAdmin));
     res.json({ message: "Administrador desactivado exitosamente" });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function uploadFotoPerfil(req, res, next) {
+  try {
+    if (!req.file) throw badRequest("Envía una imagen en el campo foto", "MISSING_FILE");
+    const idAdmin = Number(req.params.idAdmin);
+    const { fotoPerfilUrl } = await AdminService.updateFotoPerfilByUpload(
+      idAdmin,
+      req.file.filename,
+      req.user
+    );
+    res.json({ message: "Foto de perfil actualizada", fotoPerfilUrl });
   } catch (err) {
     next(err);
   }

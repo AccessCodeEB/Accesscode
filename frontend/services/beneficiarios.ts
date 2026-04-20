@@ -31,6 +31,8 @@ export interface Beneficiario {
   estatus: string
   membresiaEstatus: string
   activo?: boolean
+  /** Ruta o URL devuelta por el backend (p. ej. /uploads/profiles/...) */
+  fotoPerfilUrl?: string | null
 }
 
 /** GET /beneficiarios */
@@ -66,4 +68,21 @@ export function deactivateBeneficiario(folio: string) {
 /** DELETE /beneficiarios/:folio/eliminar — eliminación permanente (solo Baja) */
 export function deleteBeneficiario(folio: string) {
   return apiClient.delete<{ message: string }>(`/beneficiarios/${folio}/eliminar`)
+}
+
+/** POST multipart /beneficiarios/:curp/foto-perfil — campo de archivo: `foto` */
+export function uploadBeneficiarioFotoPerfil(curp: string, file: File) {
+  const fd = new FormData()
+  fd.append("foto", file)
+  return apiClient.postFormData<{ message: string; fotoPerfilUrl: string }>(
+    `/beneficiarios/${encodeURIComponent(curp)}/foto-perfil`,
+    fd
+  )
+}
+
+/** DELETE /beneficiarios/:curp/foto-perfil — quita foto en servidor y archivo */
+export function deleteBeneficiarioFotoPerfil(curp: string) {
+  return apiClient.delete<{ message: string; fotoPerfilUrl: null }>(
+    `/beneficiarios/${encodeURIComponent(curp)}/foto-perfil`
+  )
 }
