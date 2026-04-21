@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-/** Rutas que la app solo resolvía en `/` con estado local; sin esto Next devuelve 404. */
+/** Rutas que la app solo resolvia en `/` con estado local; sin esto Next devuelve 404. */
 const SECTION_BY_PATH: Record<string, string> = {
   "/beneficiarios": "beneficiarios",
   "/membresias": "membresias",
@@ -13,7 +13,7 @@ const SECTION_BY_PATH: Record<string, string> = {
   "/dashboard": "dashboard",
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname
   const section = SECTION_BY_PATH[path]
   if (!section) {
