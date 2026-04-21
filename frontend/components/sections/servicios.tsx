@@ -38,6 +38,8 @@ export function ServiciosSection() {
   const [showRegistroDialog, setShowRegistroDialog] = useState(false)
   const [busquedaBeneficiario, setBusquedaBeneficiario] = useState("")
   const [beneficiarioEncontrado, setBeneficiarioEncontrado] = useState<{ curp: string; nombre: string; membresia: string } | null>(null)
+  const [fechaServicio, setFechaServicio] = useState(() => new Date().toISOString().split("T")[0])
+  const [fechaError, setFechaError] = useState("")
   const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([])
   const [loadingBeneficiarios, setLoadingBeneficiarios] = useState(false)
   const [showSugerencias, setShowSugerencias] = useState(false)
@@ -81,6 +83,8 @@ export function ServiciosSection() {
       s.folio.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.servicio.toLowerCase().includes(searchTerm.toLowerCase())
   )
+  const hoy = new Date().toISOString().split("T")[0]
+  const fechaEsFutura = fechaServicio > hoy
 
   const busquedaNormalizada = busquedaBeneficiario.trim().toLowerCase()
   const sugerenciasBeneficiarios = busquedaNormalizada
@@ -143,6 +147,16 @@ export function ServiciosSection() {
     setShowSugerencias(false)
   }
 
+  const handleRegistrarServicio = () => {
+    if (fechaEsFutura) {
+      setFechaError("No se permiten fechas futuras. Solo hoy o fechas anteriores.")
+      return
+    }
+
+    setFechaError("")
+    setShowRegistroDialog(false)
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -156,6 +170,8 @@ export function ServiciosSection() {
           setShowRegistroDialog(true)
           setBeneficiarioEncontrado(null)
           setBusquedaBeneficiario("")
+          setFechaServicio(hoy)
+          setFechaError("")
         }}>
           <Plus className="size-5" />
           Nuevo Servicio
@@ -303,7 +319,19 @@ export function ServiciosSection() {
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <Label className="text-base">Fecha</Label>
-                <Input type="date" className="h-12 text-base" defaultValue="2026-02-26" />
+                <Input
+                  type="date"
+                  className="h-12 text-base"
+                  max={hoy}
+                  value={fechaServicio}
+                  onChange={(e) => {
+                    setFechaServicio(e.target.value)
+                    if (fechaError) setFechaError("")
+                  }}
+                />
+                {fechaError && (
+                  <p className="text-sm font-medium text-destructive">{fechaError}</p>
+                )}
               </div>
               <div className="flex flex-col gap-2">
                 <Label className="text-base">Monto</Label>
@@ -318,8 +346,8 @@ export function ServiciosSection() {
               <Button
                 size="lg"
                 className="text-base"
-                disabled={!beneficiarioEncontrado || beneficiarioEncontrado.membresia === "Vencida"}
-                onClick={() => setShowRegistroDialog(false)}
+                disabled={!beneficiarioEncontrado || beneficiarioEncontrado.membresia === "Vencida" || fechaEsFutura}
+                onClick={handleRegistrarServicio}
               >
                 Registrar Servicio
               </Button>
