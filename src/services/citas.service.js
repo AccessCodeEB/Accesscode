@@ -1,7 +1,7 @@
 import * as citasModel from "../models/citas.model.js";
 import { badRequest, notFound } from "../utils/httpErrors.js";
 
-const ESTATUS_VALIDOS = ["PROGRAMADA", "COMPLETADA", "CANCELADA"];
+const ESTATUS_VALIDOS = ["PROGRAMADA", "CONFIRMADA", "COMPLETADA", "CANCELADA"];
 
 export const getAllCitas = async () => {
   return await citasModel.findAll();
@@ -18,7 +18,7 @@ export const getCitaById = async (id) => {
 };
 
 export const createCita = async (data) => {
-  const { curp, idTipoServicio, fecha, estatus } = data;
+  const { curp, idTipoServicio, fecha, hora, estatus } = data;
 
   if (!curp || !idTipoServicio || !fecha) {
     throw badRequest("CURP, idTipoServicio y fecha son obligatorios");
@@ -28,11 +28,15 @@ export const createCita = async (data) => {
     throw badRequest("Estatus no válido");
   }
 
+  // Combine fecha + hora into a single datetime string for Oracle TO_TIMESTAMP
+  const horaFinal = hora ?? "00:00";
+  const fechaDatetime = `${fecha} ${horaFinal}:00`;
+
   return await citasModel.create({
     curp: curp.toUpperCase(),
     idTipoServicio,
     especialista: data.especialista || null,
-    fecha,
+    fecha: fechaDatetime,
     estatus: (estatus || "PROGRAMADA").toUpperCase(),
     notas: data.notas || null,
   });
@@ -45,21 +49,31 @@ export const updateCita = async (id, data) => {
     throw notFound("Cita no encontrada");
   }
 
+  // Merge incoming fecha+hora into a single datetime string
+  let fechaFinal = data.fecha ?? null;
+  if (fechaFinal) {
+    const hora = data.hora ?? "00:00";
+    fechaFinal = `${fechaFinal} ${hora}:00`;
+  } else if (cita.FECHA) {
+    const d = cita.FECHA instanceof Date ? cita.FECHA : new Date(cita.FECHA);
+    fechaFinal = d.toISOString().replace("T", " ").slice(0, 19);
+  }
+
   const estatus = data.estatus
     ? data.estatus.toUpperCase()
-    : cita[5];
+    : String(cita.ESTATUS ?? "PROGRAMADA").toUpperCase();
 
-  if (estatus && !ESTATUS_VALIDOS.includes(estatus)) {
+  if (!ESTATUS_VALIDOS.includes(estatus)) {
     throw badRequest("Estatus no válido");
   }
 
   return await citasModel.update(id, {
-    curp: data.curp ? data.curp.toUpperCase() : cita[1],
-    idTipoServicio: data.idTipoServicio ?? cita[2],
-    especialista: data.especialista ?? cita[3],
-    fecha: data.fecha ?? cita[4],
+    curp:          data.curp          ? data.curp.toUpperCase() : cita.CURP,
+    idTipoServicio: data.idTipoServicio ?? cita.ID_TIPO_SERVICIO,
+    especialista:  data.especialista  ?? cita.ESPECIALISTA,
+    fecha:         fechaFinal,
     estatus,
-    notas: data.notas ?? cita[6],
+    notas:         data.notas         ?? cita.NOTAS,
   });
 };
 

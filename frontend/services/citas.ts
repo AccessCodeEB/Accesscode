@@ -12,8 +12,9 @@ export interface Cita {
 }
 
 export interface NuevaCitaPayload {
-  folio: string
-  especialista: string
+  curp: string
+  idTipoServicio: number
+  especialista?: string
   fecha: string
   hora: string
   notas?: string
@@ -24,17 +25,17 @@ export function getCitas() {
   return apiClient.get<Cita[]>("/citas")
 }
 
-/** GET /citas?fecha=YYYY-MM-DD */
-export function getCitasPorFecha(fecha: string) {
-  return apiClient.get<Cita[]>(`/citas?fecha=${fecha}`)
-}
-
 /** POST /citas */
 export function createCita(data: NuevaCitaPayload) {
-  return apiClient.post<Cita>("/citas", data)
+  return apiClient.post<{ message: string }>("/citas", data)
 }
 
 /** PATCH /citas/:id — actualiza el estatus */
 export function updateEstatusCita(id: number, estatus: Cita["estatus"]) {
-  return apiClient.patch<Cita>(`/citas/${id}`, { estatus })
+  return apiClient.patch<{ message: string }>(`/citas/${id}`, { estatus })
+}
+
+/** PUT /citas/:id — actualización completa */
+export function updateCita(id: number, data: Partial<NuevaCitaPayload & { estatus: string }>) {
+  return apiClient.put<{ message: string }>(`/citas/${id}`, data)
 }

@@ -13,6 +13,7 @@ router.get("/", getCitas);
 router.get("/:id", getCitaById);
 router.post("/", createCita);
 router.put("/:id", updateCita);
+router.patch("/:id", updateCita); // alias: partial update (e.g. only estatus)
 router.delete("/:id", deleteCita);
 
 export default router;
