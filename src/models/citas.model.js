@@ -10,7 +10,8 @@ export const findAll = async () => {
         c.CURP,
         c.ID_TIPO_SERVICIO,
         c.ESPECIALISTA,
-        c.FECHA,
+        TO_CHAR(c.FECHA, 'YYYY-MM-DD') AS FECHA,
+        TO_CHAR(c.FECHA, 'HH24:MI')    AS HORA,
         c.ESTATUS,
         c.NOTAS,
         b.NOMBRES || ' ' || b.APELLIDO_PATERNO || ' ' || NVL(b.APELLIDO_MATERNO,'') AS NOMBRE_BENEFICIARIO

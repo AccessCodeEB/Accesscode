@@ -105,7 +105,7 @@ function DetailField({
   return (
     <div className="space-y-1.5 flex min-w-0 flex-col items-start">
       <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">{label}</p>
-      <div className="w-full break-words text-[15px] font-medium text-foreground leading-snug">{display}</div>
+      <div className="w-full wrap-break-word text-[15px] font-medium text-foreground leading-snug">{display}</div>
     </div>
   )
 }
@@ -273,7 +273,7 @@ export function BeneficiariosSection() {
       </div>
 
       {/* ── Grid de tarjetas ── */}
-      <div className="grid justify-center gap-2 sm:gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(min(100%,264px),264px))]">
+      <div className="grid justify-center gap-2 sm:gap-2.5 grid-cols-[repeat(auto-fill,minmax(min(100%,264px),264px))]">
         {filtered.map((b) => {
           const initials = `${b.nombres?.[0] ?? ""}${b.apellidoPaterno?.[0] ?? ""}`
           const nombre = `${b.nombres ?? ""} ${b.apellidoPaterno ?? ""} ${b.apellidoMaterno ?? ""}`.trim()
@@ -283,7 +283,12 @@ export function BeneficiariosSection() {
               <div className={cn("mb-3 flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full text-lg font-bold shadow-sm", getPhotoRingClasses(b.estatus))}>
                 {cardPhoto ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={cardPhoto} alt="" className="size-full object-contain object-center" />
+                  <img
+                    src={cardPhoto}
+                    alt=""
+                    className="size-full object-contain object-center"
+                    onError={(e) => { e.currentTarget.style.display = "none" }}
+                  />
                 ) : (
                   initials
                 )}
@@ -321,140 +326,142 @@ export function BeneficiariosSection() {
       <Dialog open={showExpedienteDialog} onOpenChange={setShowExpedienteDialog}>
         <DialogContent
           showCloseButton={false}
+          aria-describedby={undefined}
           className="max-w-4xl w-[calc(100vw-2rem)] max-h-[min(90vh,900px)] flex flex-col p-0 gap-0 overflow-hidden border-none shadow-2xl sm:rounded-3xl"
         >
           {selectedBeneficiario && (() => {
-             const fotoUrl = resolvePublicUploadUrl(selectedBeneficiario.fotoPerfilUrl ?? undefined)
-             return (
-            <>
-              {/* Encabezado del Expediente */}
-              <div className="shrink-0 bg-background border-b border-border/40 px-6 py-6 sm:px-8">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex min-w-0 flex-1 items-center gap-4">
-                    
-                    {/* FOTO DE PERFIL CON HOVER Y ZOOM EN DETALLES */}
-                    {fotoUrl ? (
-                      <button
-                        type="button"
-                        onClick={() => setFotoPerfilZoomOpen(true)}
-                        className={cn(
-                          "group relative flex size-16 shrink-0 cursor-zoom-in items-center justify-center overflow-hidden rounded-full text-xl font-bold shadow-sm outline-none transition-shadow hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring",
-                          getPhotoRingClasses(selectedBeneficiario.estatus)
-                        )}
-                        aria-label="Ampliar foto de perfil"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={fotoUrl}
-                          alt="Perfil del beneficiario"
-                          className="size-full object-contain object-center transition-transform duration-300 ease-out group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                        <ZoomIn className="absolute size-6 text-white opacity-0 drop-shadow-md transition-all duration-300 group-hover:scale-110 group-hover:opacity-100" strokeWidth={2} />
-                      </button>
-                    ) : (
-                      <div
-                        className={cn(
-                          "flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full text-xl font-bold shadow-sm",
-                          getPhotoRingClasses(selectedBeneficiario.estatus)
-                        )}
-                      >
-                        {`${selectedBeneficiario.nombres?.[0] ?? ""}${selectedBeneficiario.apellidoPaterno?.[0] ?? ""}`}
-                      </div>
-                    )}
+            const fotoUrl = resolvePublicUploadUrl(selectedBeneficiario.fotoPerfilUrl ?? undefined)
+            return (
+              <>
+                {/* Encabezado del Expediente */}
+                <div className="shrink-0 bg-background border-b border-border/40 px-6 py-6 sm:px-8">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex min-w-0 flex-1 items-center gap-4">
 
-                    <div className="min-w-0 flex-1">
-                      <DialogTitle className="text-2xl font-bold text-foreground">
-                        {selectedBeneficiario.nombres} {selectedBeneficiario.apellidoPaterno} {selectedBeneficiario.apellidoMaterno}
-                      </DialogTitle>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                        <span className="font-semibold text-primary/80">{selectedBeneficiario.folio}</span>
-                        <span>•</span>
-                        {getEstatusBadge(selectedBeneficiario.estatus)}
+                      {/* FOTO DE PERFIL CON HOVER Y ZOOM EN DETALLES */}
+                      {fotoUrl ? (
+                        <button
+                          type="button"
+                          onClick={() => setFotoPerfilZoomOpen(true)}
+                          className={cn(
+                            "group relative flex size-16 shrink-0 cursor-zoom-in items-center justify-center overflow-hidden rounded-full text-xl font-bold shadow-sm outline-none transition-shadow hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring",
+                            getPhotoRingClasses(selectedBeneficiario.estatus)
+                          )}
+                          aria-label="Ampliar foto de perfil"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={fotoUrl}
+                            alt="Perfil del beneficiario"
+                            className="size-full object-contain object-center transition-transform duration-300 ease-out group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                          <ZoomIn className="absolute size-6 text-white opacity-0 drop-shadow-md transition-all duration-300 group-hover:scale-110 group-hover:opacity-100" strokeWidth={2} />
+                        </button>
+                      ) : (
+                        <div
+                          className={cn(
+                            "flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full text-xl font-bold shadow-sm",
+                            getPhotoRingClasses(selectedBeneficiario.estatus)
+                          )}
+                        >
+                          {`${selectedBeneficiario.nombres?.[0] ?? ""}${selectedBeneficiario.apellidoPaterno?.[0] ?? ""}`}
+                        </div>
+                      )}
+
+                      <div className="min-w-0 flex-1">
+                        <DialogTitle className="text-2xl font-bold text-foreground">
+                          {selectedBeneficiario.nombres} {selectedBeneficiario.apellidoPaterno} {selectedBeneficiario.apellidoMaterno}
+                        </DialogTitle>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                          <span className="font-semibold text-primary/80">{selectedBeneficiario.folio}</span>
+                          <span>•</span>
+                          {getEstatusBadge(selectedBeneficiario.estatus)}
+                        </div>
                       </div>
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 shrink-0 gap-1.5 rounded-lg shadow-sm"
+                      onClick={() => {
+                        const b = selectedBeneficiario
+                        setShowExpedienteDialog(false)
+                        openEdit(b)
+                      }}
+                    >
+                      <Edit className="size-3.5" />
+                      Editar
+                    </Button>
                   </div>
+                </div>
+
+                {/* Contenido del Expediente */}
+                <div className="flex-1 min-h-0 overflow-y-auto bg-muted/10 px-6 py-6 sm:px-8 scrollbar-hide">
+                  <div className="space-y-6 pb-2">
+                    <DetailGroup title="Información Personal" icon={User}>
+                      <DetailField label="Nombres" value={selectedBeneficiario.nombres} />
+                      <DetailField label="Apellido Paterno" value={selectedBeneficiario.apellidoPaterno} />
+                      <DetailField label="Apellido Materno" value={selectedBeneficiario.apellidoMaterno} />
+                      <DetailField label="Fecha de Nacimiento" value={selectedBeneficiario.fechaNacimiento} />
+                      <DetailField label="Género" value={formatGeneroDetalle(selectedBeneficiario.genero)} />
+                      <DetailField label="Tipo de Sangre" value={selectedBeneficiario.tipoSangre} badgeVariant="blood" />
+                      <DetailField label="Nombre del Padre / Madre" value={selectedBeneficiario.nombrePadreMadre} />
+                      <div className="min-w-0 lg:col-span-2">
+                        <DetailField label="CURP" value={selectedBeneficiario.curp} badgeVariant="curpPlain" />
+                      </div>
+                    </DetailGroup>
+
+                    <DetailGroup title="Dirección" icon={MapPin}>
+                      <DetailField label="Calle y Número" value={selectedBeneficiario.calle} />
+                      <DetailField label="Colonia" value={selectedBeneficiario.colonia} />
+                      <DetailField label="CP" value={selectedBeneficiario.cp} />
+                      <DetailField label="Ciudad" value={selectedBeneficiario.ciudad} />
+                      <DetailField label="Municipio" value={selectedBeneficiario.municipio} />
+                      <DetailField label="Estado" value={selectedBeneficiario.estado} />
+                    </DetailGroup>
+
+                    <DetailGroup title="Contacto" icon={Phone}>
+                      <DetailField label="Teléfono Casa" value={selectedBeneficiario.telefonoCasa} />
+                      <DetailField label="Teléfono Celular" value={selectedBeneficiario.telefonoCelular} />
+                      <DetailField label="Correo Electrónico" value={selectedBeneficiario.correoElectronico} />
+                    </DetailGroup>
+
+                    <DetailGroup title="Contacto de Emergencia" icon={HeartPulse}>
+                      <DetailField label="Nombre" value={selectedBeneficiario.contactoEmergencia} />
+                      <DetailField label="Teléfono" value={selectedBeneficiario.telefonoEmergencia} />
+                    </DetailGroup>
+
+                    <DetailGroup title="Médico / Diagnóstico" icon={Stethoscope}>
+                      <DetailField label="Tipo de Espina Bífida" value={selectedBeneficiario.tipo} />
+                      <DetailField label="¿Usa válvula?" value={selectedBeneficiario.usaValvula} badgeVariant="valve" />
+                      <DetailField label="Municipio de Nacimiento" value={selectedBeneficiario.municipioNacimiento} />
+                      <DetailField label="Hospital de Nacimiento" value={selectedBeneficiario.hospitalNacimiento} />
+                      <DetailField label="Notas" value={selectedBeneficiario.notas} />
+                    </DetailGroup>
+
+                    <DetailGroup title="Administrativo" icon={ClipboardList}>
+                      <DetailField label="Fecha de Alta" value={selectedBeneficiario.fechaAlta} />
+                      <DetailField label="No. Credencial" value={selectedBeneficiario.numeroCredencial} badgeVariant="credential" />
+                      <DetailField label="Estado de membresía" value={selectedBeneficiario.estatus} badgeVariant="membresia" />
+                      <DetailField label="Credencial (vigencia)" value={selectedBeneficiario.membresiaEstatus} />
+                    </DetailGroup>
+                  </div>
+                </div>
+
+                <div className="shrink-0 border-t border-border/40 bg-background px-6 py-4 sm:px-8 flex justify-end">
                   <Button
+                    type="button"
                     variant="outline"
-                    size="sm"
-                    className="h-9 shrink-0 gap-1.5 rounded-lg shadow-sm"
-                    onClick={() => {
-                      const b = selectedBeneficiario
-                      setShowExpedienteDialog(false)
-                      openEdit(b)
-                    }}
+                    className="rounded-lg shadow-sm"
+                    onClick={() => setShowExpedienteDialog(false)}
                   >
-                    <Edit className="size-3.5" />
-                    Editar
+                    Cerrar
                   </Button>
                 </div>
-              </div>
-
-              {/* Contenido del Expediente */}
-              <div className="flex-1 min-h-0 overflow-y-auto bg-muted/10 px-6 py-6 sm:px-8 scrollbar-hide">
-                <div className="space-y-6 pb-2">
-                  <DetailGroup title="Información Personal" icon={User}>
-                    <DetailField label="Nombres" value={selectedBeneficiario.nombres} />
-                    <DetailField label="Apellido Paterno" value={selectedBeneficiario.apellidoPaterno} />
-                    <DetailField label="Apellido Materno" value={selectedBeneficiario.apellidoMaterno} />
-                    <DetailField label="Fecha de Nacimiento" value={selectedBeneficiario.fechaNacimiento} />
-                    <DetailField label="Género" value={formatGeneroDetalle(selectedBeneficiario.genero)} />
-                    <DetailField label="Tipo de Sangre" value={selectedBeneficiario.tipoSangre} badgeVariant="blood" />
-                    <DetailField label="Nombre del Padre / Madre" value={selectedBeneficiario.nombrePadreMadre} />
-                    <div className="min-w-0 lg:col-span-2">
-                      <DetailField label="CURP" value={selectedBeneficiario.curp} badgeVariant="curpPlain" />
-                    </div>
-                  </DetailGroup>
-
-                  <DetailGroup title="Dirección" icon={MapPin}>
-                    <DetailField label="Calle y Número" value={selectedBeneficiario.calle} />
-                    <DetailField label="Colonia" value={selectedBeneficiario.colonia} />
-                    <DetailField label="CP" value={selectedBeneficiario.cp} />
-                    <DetailField label="Ciudad" value={selectedBeneficiario.ciudad} />
-                    <DetailField label="Municipio" value={selectedBeneficiario.municipio} />
-                    <DetailField label="Estado" value={selectedBeneficiario.estado} />
-                  </DetailGroup>
-
-                  <DetailGroup title="Contacto" icon={Phone}>
-                    <DetailField label="Teléfono Casa" value={selectedBeneficiario.telefonoCasa} />
-                    <DetailField label="Teléfono Celular" value={selectedBeneficiario.telefonoCelular} />
-                    <DetailField label="Correo Electrónico" value={selectedBeneficiario.correoElectronico} />
-                  </DetailGroup>
-
-                  <DetailGroup title="Contacto de Emergencia" icon={HeartPulse}>
-                    <DetailField label="Nombre" value={selectedBeneficiario.contactoEmergencia} />
-                    <DetailField label="Teléfono" value={selectedBeneficiario.telefonoEmergencia} />
-                  </DetailGroup>
-
-                  <DetailGroup title="Médico / Diagnóstico" icon={Stethoscope}>
-                    <DetailField label="Tipo de Espina Bífida" value={selectedBeneficiario.tipo} />
-                    <DetailField label="¿Usa válvula?" value={selectedBeneficiario.usaValvula} badgeVariant="valve" />
-                    <DetailField label="Municipio de Nacimiento" value={selectedBeneficiario.municipioNacimiento} />
-                    <DetailField label="Hospital de Nacimiento" value={selectedBeneficiario.hospitalNacimiento} />
-                    <DetailField label="Notas" value={selectedBeneficiario.notas} />
-                  </DetailGroup>
-
-                  <DetailGroup title="Administrativo" icon={ClipboardList}>
-                    <DetailField label="Fecha de Alta" value={selectedBeneficiario.fechaAlta} />
-                    <DetailField label="No. Credencial" value={selectedBeneficiario.numeroCredencial} badgeVariant="credential" />
-                    <DetailField label="Estado de membresía" value={selectedBeneficiario.estatus} badgeVariant="membresia" />
-                    <DetailField label="Credencial (vigencia)" value={selectedBeneficiario.membresiaEstatus} />
-                  </DetailGroup>
-                </div>
-              </div>
-
-              <div className="shrink-0 border-t border-border/40 bg-background px-6 py-4 sm:px-8 flex justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="rounded-lg shadow-sm"
-                  onClick={() => setShowExpedienteDialog(false)}
-                >
-                  Cerrar
-                </Button>
-              </div>
-            </>
-          )}
+              </>
+            )
+          }
           )()}
         </DialogContent>
       </Dialog>
@@ -470,82 +477,82 @@ export function BeneficiariosSection() {
           {credencialBeneficiario && (() => {
             const credPhoto = resolvePublicUploadUrl(credencialBeneficiario.fotoPerfilUrl ?? undefined)
             return (
-            <>
-              <div className="border-b border-border/50 bg-primary/5 px-6 py-4">
-                <DialogHeader className="gap-1 text-left">
-                  <DialogTitle className="text-lg font-bold">Credencial digital</DialogTitle>
-                  <DialogDescription className="text-xs text-muted-foreground">
-                    Vista previa de la credencial del beneficiario.
-                  </DialogDescription>
-                </DialogHeader>
-              </div>
-              <div className="bg-muted/20 px-6 py-6">
-                <div className="overflow-hidden rounded-2xl border border-border/60 bg-background shadow-md">
-                  <div className="flex items-center justify-between gap-3 border-b border-border/50 bg-primary/[0.06] px-4 py-3">
-                    <img
-                      src="/logo-espina-bifida.png"
-                      alt=""
-                      className="h-9 w-auto object-contain"
-                    />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                      Beneficiario
-                    </span>
-                  </div>
-                  <div className="flex gap-4 p-4">
-                    <div
-                      className={cn(
-                        "relative aspect-square w-20 shrink-0 overflow-hidden rounded-xl text-lg font-bold shadow-sm",
-                        getPhotoRingClasses(credencialBeneficiario.estatus)
-                      )}
-                    >
-                      {credPhoto ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={credPhoto}
-                          alt=""
-                          className="absolute inset-0 size-full object-contain object-center bg-muted/40"
-                        />
-                      ) : (
-                        <div className="flex size-full items-center justify-center">
-                          {(credencialBeneficiario.nombres?.[0] ?? "")}
-                          {(credencialBeneficiario.apellidoPaterno?.[0] ?? "")}
+              <>
+                <div className="border-b border-border/50 bg-primary/5 px-6 py-4">
+                  <DialogHeader className="gap-1 text-left">
+                    <DialogTitle className="text-lg font-bold">Credencial digital</DialogTitle>
+                    <DialogDescription className="text-xs text-muted-foreground">
+                      Vista previa de la credencial del beneficiario.
+                    </DialogDescription>
+                  </DialogHeader>
+                </div>
+                <div className="bg-muted/20 px-6 py-6">
+                  <div className="overflow-hidden rounded-2xl border border-border/60 bg-background shadow-md">
+                    <div className="flex items-center justify-between gap-3 border-b border-border/50 bg-primary/6 px-4 py-3">
+                      <img
+                        src="/logo-espina-bifida.png"
+                        alt=""
+                        className="h-9 w-auto object-contain"
+                      />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Beneficiario
+                      </span>
+                    </div>
+                    <div className="flex gap-4 p-4">
+                      <div
+                        className={cn(
+                          "relative aspect-square w-20 shrink-0 overflow-hidden rounded-xl text-lg font-bold shadow-sm",
+                          getPhotoRingClasses(credencialBeneficiario.estatus)
+                        )}
+                      >
+                        {credPhoto ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={credPhoto}
+                            alt=""
+                            className="absolute inset-0 size-full object-contain object-center bg-muted/40"
+                          />
+                        ) : (
+                          <div className="flex size-full items-center justify-center">
+                            {(credencialBeneficiario.nombres?.[0] ?? "")}
+                            {(credencialBeneficiario.apellidoPaterno?.[0] ?? "")}
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <p className="text-sm font-bold leading-tight text-foreground line-clamp-2">
+                          {credencialBeneficiario.nombres} {credencialBeneficiario.apellidoPaterno}{" "}
+                          {credencialBeneficiario.apellidoMaterno}
+                        </p>
+                        <p className="text-xs font-semibold text-primary/90">{credencialBeneficiario.folio}</p>
+                        {credencialBeneficiario.numeroCredencial && (
+                          <p className="font-mono text-[11px] font-bold text-amber-800">
+                            No. {credencialBeneficiario.numeroCredencial}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-2 border-t border-border/40 bg-muted/30 px-4 py-3 text-xs">
+                      {credencialBeneficiario.curp && (
+                        <div>
+                          <p className="font-bold uppercase tracking-wide text-muted-foreground">CURP</p>
+                          <p className="mt-0.5 break-all font-medium text-foreground">{credencialBeneficiario.curp}</p>
                         </div>
                       )}
-                    </div>
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <p className="text-sm font-bold leading-tight text-foreground line-clamp-2">
-                        {credencialBeneficiario.nombres} {credencialBeneficiario.apellidoPaterno}{" "}
-                        {credencialBeneficiario.apellidoMaterno}
-                      </p>
-                      <p className="text-xs font-semibold text-primary/90">{credencialBeneficiario.folio}</p>
-                      {credencialBeneficiario.numeroCredencial && (
-                        <p className="font-mono text-[11px] font-bold text-amber-800">
-                          No. {credencialBeneficiario.numeroCredencial}
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <span className="text-muted-foreground">Membresía:</span>
+                        {getEstatusBadge(credencialBeneficiario.estatus)}
+                      </div>
+                      {credencialBeneficiario.tipo && (
+                        <p className="text-muted-foreground">
+                          <span className="font-semibold text-foreground">Tipo: </span>
+                          {credencialBeneficiario.tipo}
                         </p>
                       )}
                     </div>
                   </div>
-                  <div className="space-y-2 border-t border-border/40 bg-muted/30 px-4 py-3 text-xs">
-                    {credencialBeneficiario.curp && (
-                      <div>
-                        <p className="font-bold uppercase tracking-wide text-muted-foreground">CURP</p>
-                        <p className="mt-0.5 break-all font-medium text-foreground">{credencialBeneficiario.curp}</p>
-                      </div>
-                    )}
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <span className="text-muted-foreground">Membresía:</span>
-                      {getEstatusBadge(credencialBeneficiario.estatus)}
-                    </div>
-                    {credencialBeneficiario.tipo && (
-                      <p className="text-muted-foreground">
-                        <span className="font-semibold text-foreground">Tipo: </span>
-                        {credencialBeneficiario.tipo}
-                      </p>
-                    )}
-                  </div>
                 </div>
-              </div>
-            </>
+              </>
             )
           })()}
         </DialogContent>
@@ -566,7 +573,7 @@ export function BeneficiariosSection() {
                 <XCircle className="size-4 shrink-0" />{saveError}
               </div>
             )}
-            
+
             <SectionCard title="Información Personal" icon={User}>
               <div className="mb-8 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 p-5 transition-colors hover:border-primary/40 hover:bg-primary/10">
                 <div className="flex flex-col items-center gap-5 sm:flex-row sm:justify-start">
@@ -910,7 +917,7 @@ export function BeneficiariosSection() {
           if (!open) setOverlayAction(null)
         }
       }}>
-        <DialogContent className="max-w-2xl w-[calc(100vw-1.5rem)] max-h-[min(90vh,880px)] flex flex-col overflow-hidden p-0 gap-0 border-none shadow-2xl sm:rounded-2xl">
+        <DialogContent aria-describedby={undefined} className="max-w-2xl w-[calc(100vw-1.5rem)] max-h-[min(90vh,880px)] flex flex-col overflow-hidden p-0 gap-0 border-none shadow-2xl sm:rounded-2xl">
 
           {/* ── OVERLAY CENTRADO PARA CONFIRMAR BAJA / ELIMINAR ── */}
           {overlayAction && (
@@ -1285,7 +1292,7 @@ export function BeneficiariosSection() {
           </div>
         </DialogContent>
       </Dialog>
-      
+
       {/* ── Dialog: Confirmación de Borrado de Foto ─────────────────────── */}
       <AlertDialog open={removeFotoConfirmOpen} onOpenChange={setRemoveFotoConfirmOpen}>
         <AlertDialogContent className="w-full max-w-xs gap-3 p-5 sm:max-w-xs">
@@ -1334,9 +1341,10 @@ export function BeneficiariosSection() {
       >
         <DialogContent
           showCloseButton={false}
+          aria-describedby={undefined}
           overlayClassName="z-[190] bg-black/80 backdrop-blur-sm"
           className={cn(
-            "z-[200] max-h-[100vh] w-auto max-w-none gap-0 border-none bg-transparent p-0 shadow-none",
+            "z-200 max-h-screen w-auto max-w-none gap-0 border-none bg-transparent p-0 shadow-none",
             "translate-x-[-50%] translate-y-[-50%] outline-none overflow-visible sm:max-w-none",
           )}
         >
@@ -1345,7 +1353,7 @@ export function BeneficiariosSection() {
             type="button"
             variant="ghost"
             size="icon"
-            className="fixed right-4 top-4 z-[210] size-10 rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white"
+            className="fixed right-4 top-4 z-210 size-10 rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white"
             onClick={() => setFotoPerfilZoomOpen(false)}
             aria-label="Cerrar vista ampliada"
           >

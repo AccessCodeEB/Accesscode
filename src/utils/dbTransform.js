@@ -13,10 +13,10 @@ export function toCamel(row) {
       .toLowerCase()
       .replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
 
-    // Oracle DATE/TIMESTAMP objects come as JS Date — serialize to full ISO string
-    // NOTE: do NOT slice here; controllers that only need the date part can slice themselves.
+    // Oracle DATE/TIMESTAMP objects come as JS Date — serialize to ISO date string.
+    // Controllers that need the time part (e.g. citas) should use TO_CHAR in SQL instead.
     if (value instanceof Date) {
-      result[camelKey] = value.toISOString();
+      result[camelKey] = value.toISOString().slice(0, 10);
     } else {
       result[camelKey] = value;
     }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Plus, CalendarDays, Check, Clock, X, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,7 @@ import { getBeneficiarios, type Beneficiario } from "@/services/beneficiarios"
 import { TIPOS_SERVICIO_SUGERIDOS } from "@/services/servicios"
 
 const DIAS_SEMANA = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"]
-const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 const ESPECIALISTAS = [
   "Dr. Roberto Méndez - Neurología",
   "Dra. Patricia Solís - Rehabilitación",
@@ -40,15 +40,15 @@ function getCitasForDay(citasList: Cita[], year: number, month: number, day: num
 function CitaStatusBadge({ status }: { status: string }) {
   const config: Record<string, { color: string; Icon: typeof Check }> = {
     Confirmada: { color: "bg-emerald-500", Icon: Check },
-    Pendiente:  { color: "bg-amber-500",   Icon: Clock },
-    Completada: { color: "bg-[#005bb5]",   Icon: Check },
-    Cancelada:  { color: "bg-red-600",     Icon: X },
+    Pendiente: { color: "bg-amber-500", Icon: Clock },
+    Completada: { color: "bg-[#005bb5]", Icon: Check },
+    Cancelada: { color: "bg-red-600", Icon: X },
   }
   const c = config[status]
   if (!c) return null
   return (
     <div className={`flex size-6 items-center justify-center rounded-full ${c.color} text-white shadow-sm shrink-0`}>
-      <c.Icon className="size-3.5 stroke-[3]" />
+      <c.Icon className="size-3.5 stroke-3" />
     </div>
   )
 }
@@ -57,34 +57,34 @@ const EMPTY_FORM = { curp: "", idTipoServicio: "", especialista: "", fecha: "", 
 
 export function CitasSection() {
   const today = new Date()
-  const [citas, setCitas]               = useState<Cita[]>([])
-  const [loading, setLoading]           = useState(true)
-  const [error, setError]               = useState<string | null>(null)
-  const [calYear, setCalYear]           = useState(today.getFullYear())
-  const [calMonth, setCalMonth]         = useState(today.getMonth())
-  const [selectedDay, setSelectedDay]   = useState<number | null>(today.getDate())
-  const [showDialog, setShowDialog]     = useState(false)
-  const [form, setForm]                 = useState(EMPTY_FORM)
-  const [saving, setSaving]             = useState(false)
-  const [saveError, setSaveError]       = useState<string | null>(null)
+  const [citas, setCitas] = useState<Cita[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [calYear, setCalYear] = useState(today.getFullYear())
+  const [calMonth, setCalMonth] = useState(today.getMonth())
+  const [selectedDay, setSelectedDay] = useState<number | null>(today.getDate())
+  const [showDialog, setShowDialog] = useState(false)
+  const [form, setForm] = useState(EMPTY_FORM)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([])
-  const [buscaBenef, setBuscaBenef]     = useState("")
-  const [updatingId, setUpdatingId]     = useState<number | null>(null)
+  const [buscaBenef, setBuscaBenef] = useState("")
+  const [updatingId, setUpdatingId] = useState<number | null>(null)
 
-  const loadCitas = () => {
+  const loadCitas = useCallback(() => {
     setLoading(true)
     getCitas()
       .then(setCitas)
       .catch(err => setError(err?.message ?? "Error al cargar citas"))
       .finally(() => setLoading(false))
-  }
+  }, [])
 
   useEffect(() => {
     loadCitas()
-    getBeneficiarios().then(setBeneficiarios).catch(() => {})
-  }, [])
+    getBeneficiarios().then(setBeneficiarios).catch(() => { })
+  }, [loadCitas])
 
-  const daysInMonth   = getDaysInMonth(calYear, calMonth)
+  const daysInMonth = getDaysInMonth(calYear, calMonth)
   const firstDayOfWeek = getFirstDayOfWeek(calYear, calMonth)
 
   const citasDelDia = useMemo(
@@ -93,7 +93,7 @@ export function CitasSection() {
   )
 
   const proximas = useMemo(() => {
-    const hoy = new Date(); hoy.setHours(0,0,0,0)
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
     return [...citas]
       .filter(c => c.estatus !== "Cancelada" && c.fecha && new Date(c.fecha + "T00:00:00") >= hoy)
       .sort((a, b) => {
@@ -166,7 +166,7 @@ export function CitasSection() {
   }
 
   if (loading) return <div className="flex h-64 items-center justify-center"><p className="text-muted-foreground text-sm">Cargando citas...</p></div>
-  if (error)   return <div className="flex h-64 items-center justify-center"><p className="text-destructive text-sm">{error}</p></div>
+  if (error) return <div className="flex h-64 items-center justify-center"><p className="text-destructive text-sm">{error}</p></div>
 
   const isToday = (day: number) =>
     day === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear()
@@ -206,7 +206,7 @@ export function CitasSection() {
               ))}
               {Array.from({ length: firstDayOfWeek }).map((_, i) => <div key={`e-${i}`} />)}
               {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(dia => {
-                const citasDia  = getCitasForDay(citas, calYear, calMonth, dia)
+                const citasDia = getCitasForDay(citas, calYear, calMonth, dia)
                 const isSelected = selectedDay === dia
                 return (
                   <button

@@ -11,33 +11,22 @@ const ESTATUS_MAP = {
 function mapCita(row) {
   const r = toCamel(row);
 
-  // FECHA comes as JS Date from Oracle or as ISO string
-  let fechaStr = "";
-  let horaStr  = "";
-  if (r.fecha) {
-    const d = r.fecha instanceof Date ? r.fecha : new Date(r.fecha);
-    if (!isNaN(d.getTime())) {
-      fechaStr = d.toISOString().slice(0, 10);
-      horaStr  = d.toISOString().slice(11, 16);
-    } else {
-      const parts = String(r.fecha).split("T");
-      fechaStr = parts[0] ?? "";
-      horaStr  = (parts[1] ?? "").slice(0, 5);
-    }
-  }
+  // FECHA and HORA come as plain strings from TO_CHAR in SQL (e.g. "2026-04-23", "14:30")
+  const fechaStr = typeof r.fecha === "string" ? r.fecha : "";
+  const horaStr  = typeof r.hora  === "string" ? r.hora  : "";
 
   const estatusRaw = String(r.estatus ?? "").toUpperCase();
   const estatus = ESTATUS_MAP[estatusRaw] ?? r.estatus ?? "Pendiente";
 
   return {
-    id:            r.idCita,
-    folio:         r.curp,
-    beneficiario:  r.nombreBeneficiario?.trim() ?? r.curp,
-    especialista:  r.especialista ?? "",
-    fecha:         fechaStr,
-    hora:          horaStr,
+    id:           r.idCita,
+    folio:        r.curp,
+    beneficiario: r.nombreBeneficiario?.trim() ?? r.curp,
+    especialista: r.especialista ?? "",
+    fecha:        fechaStr,
+    hora:         horaStr,
     estatus,
-    notas:         safeClobString(r.notas),
+    notas:        safeClobString(r.notas),
   };
 }
 
