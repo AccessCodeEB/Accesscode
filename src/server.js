@@ -1,8 +1,5 @@
-import dotenv from "dotenv";
 import { createPool, closePool } from "./config/db.js";
 import app from "./app.js";
-
-dotenv.config({ override: true });
 
 const REQUIRED_ENV = [
   "DB_USER",

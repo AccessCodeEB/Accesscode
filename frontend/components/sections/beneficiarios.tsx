@@ -1334,11 +1334,10 @@ export function BeneficiariosSection() {
       >
         <DialogContent
           showCloseButton={false}
-          overlayClassName="z-[190] bg-black/75"
+          overlayClassName="z-[190] bg-black/80 backdrop-blur-sm"
           className={cn(
-            "z-[200] max-h-[min(92vh,900px)] w-[min(96vw,56rem)] max-w-[min(96vw,56rem)] gap-0 overflow-hidden border border-white/15",
-            "bg-black/92 p-2 shadow-2xl sm:rounded-xl sm:p-4",
-            "translate-x-[-50%] translate-y-[-50%]",
+            "z-[200] max-h-[100vh] w-auto max-w-none gap-0 border-none bg-transparent p-0 shadow-none",
+            "translate-x-[-50%] translate-y-[-50%] outline-none overflow-visible sm:max-w-none",
           )}
         >
           <DialogTitle className="sr-only">Foto de perfil ampliada</DialogTitle>
@@ -1346,18 +1345,18 @@ export function BeneficiariosSection() {
             type="button"
             variant="ghost"
             size="icon"
-            className="absolute right-1 top-1 z-10 size-9 rounded-full text-white hover:bg-white/15 hover:text-white sm:right-2 sm:top-2"
+            className="fixed right-4 top-4 z-[210] size-10 rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white"
             onClick={() => setFotoPerfilZoomOpen(false)}
             aria-label="Cerrar vista ampliada"
           >
-            <X className="size-5" />
+            <X className="size-6" />
           </Button>
           {fotoZoomUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={fotoZoomUrl}
               alt="Foto de perfil"
-              className="mx-auto max-h-[min(85vh,820px)] w-full object-contain rounded-lg"
+              className="mx-auto aspect-square max-h-[min(85vh,800px)] w-auto max-w-[min(92vw,800px)] object-cover rounded-full shadow-2xl"
             />
           ) : null}
         </DialogContent>

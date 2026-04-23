@@ -47,6 +47,24 @@ npm run dev
 - En el repo va **`frontend/.env.example`**: plantilla **sin secretos**, para que el equipo sepa qué variable existe. **Sí se versiona.**
 - **`frontend/.env.local`** (u overrides locales) **no** se versiona: créalo solo si necesitas otro host/puerto; está en `.gitignore`.
 
+### Fotos de perfil (`/uploads/profiles/`)
+
+Las imágenes viven en **`uploads/`** (no va en git). La BD guarda rutas como `/uploads/profiles/ben-CURP-….jpg`.
+
+**Para que solo con `npm run dev` todo el equipo vea las fotos** (sin scripts manuales):
+
+1. Un responsable del equipo define en **`.env.defaults`** (versionado, sin secretos) la variable:
+
+   `PROFILE_PHOTOS_REMOTE_BASE=https://tu-api-publica.com`
+
+   Debe ser la URL base de un Express que **ya tenga** esos archivos en disco (staging, servidor de clase, etc.), **sin** barra final.
+
+2. Cada persona copia **`.env.example` → `.env`** con Oracle/JWT como siempre, y **`frontend/.env.local`** con `NEXT_PUBLIC_API_URL=http://localhost:3000`.
+
+3. Al pedir una foto que no existe en su `uploads/profiles/`, el backend la **descarga de `PROFILE_PHOTOS_REMOTE_BASE`**, la guarda en local y la sirve; las siguientes van desde disco.
+
+Opcional: **`npm run sync:profile-photos`** sigue sirviendo para bajar todas las fotos de golpe (ver comentarios en `scripts/sync-profile-photos.js`).
+
 ---
 
 ## Estructura del proyecto

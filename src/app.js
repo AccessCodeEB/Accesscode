@@ -2,8 +2,15 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
+import { fileURLToPath } from "url";
 
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
+import { mountProfilePhotosRemoteFallback } from "./middleware/profilePhotosRemoteFallback.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const rootDir = path.join(__dirname, "..");
+dotenv.config({ path: path.join(rootDir, ".env.defaults") });
+dotenv.config({ path: path.join(rootDir, ".env"), override: true });
 import beneficiariosRoutes   from "./routes/beneficiarios.routes.js";
 import beneficiariosV1Routes from "./routes/beneficiarios.v1.routes.js";
 import serviciosRoutes        from "./routes/servicios.routes.js";
@@ -16,8 +23,6 @@ import inventarioV1Routes     from "./routes/inventario.v1.routes.js";
 import administradoresRoutes  from "./routes/administradores.routes.js";
 import rolesRoutes            from "./routes/roles.routes.js";
 
-dotenv.config();
-
 const app = express();
 
 app.use(cors({
@@ -28,6 +33,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+mountProfilePhotosRemoteFallback(app);
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));

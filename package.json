@@ -14,7 +14,8 @@
     "import:articulos:dry": "node scripts/import-articulos-from-xls.js articulos.xls",
     "import:articulos": "node scripts/import-articulos-from-xls.js articulos.xls --apply",
     "import:articulos:dry:fixneg": "node scripts/import-articulos-from-xls.js articulos.xls --fix-negative-inventory",
-    "import:articulos:fixneg": "node scripts/import-articulos-from-xls.js articulos.xls --fix-negative-inventory --apply"
+    "import:articulos:fixneg": "node scripts/import-articulos-from-xls.js articulos.xls --fix-negative-inventory --apply",
+    "sync:profile-photos": "node scripts/sync-profile-photos.js"
   },
   "repository": {
     "type": "git",
