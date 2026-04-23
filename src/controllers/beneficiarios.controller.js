@@ -109,7 +109,8 @@ export async function uploadFotoPerfil(req, res, next) {
     const curp = String(req.params.curp).trim().toUpperCase();
     const { fotoPerfilUrl } = await BeneficiarioService.updateFotoPerfilByUpload(
       curp,
-      req.file.filename
+      req.file.path,       // ruta completa al archivo temporal
+      req.file.mimetype    // p.ej "image/jpeg"
     );
     res.json({ message: "Foto de perfil actualizada", fotoPerfilUrl });
   } catch (err) {

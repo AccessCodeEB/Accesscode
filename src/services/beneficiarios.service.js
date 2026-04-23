@@ -1,7 +1,9 @@
+import fs from "node:fs";
+import path from "node:path";
 import * as BeneficiarioModel from "../models/beneficiarios.model.js";
 import * as MembresiasModel from "../models/membresias.model.js";
 import { badRequest, notFound, conflict } from "../utils/httpErrors.js";
-import { publicPathForStoredFile, unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
+import { unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
 
 const CURP_REGEX   = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/;
 const EMAIL_REGEX  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -211,8 +213,12 @@ export async function deactivate(curp) {
   await MembresiasModel.cancelarPorCurp(id);
 }
 
-/** Tras multer: `filename` es el nombre en disco bajo uploads/profiles */
-export async function updateFotoPerfilByUpload(curpParam, filename) {
+/**
+ * Tras multer: lee el archivo subido, lo convierte a base64 y lo guarda
+ * directamente en Oracle. Así todos los compañeros ven la misma foto
+ * sin necesitar compartir archivos locales ni configurar IPs.
+ */
+export async function updateFotoPerfilByUpload(curpParam, filePath, mimetype) {
   const curp = validarCurpRuta(curpParam);
 
   const existente = await BeneficiarioModel.findById(curp);
@@ -220,12 +226,22 @@ export async function updateFotoPerfilByUpload(curpParam, filename) {
     throw notFound(`No existe un beneficiario con la CURP ${curp}`, "BENEFICIARIO_NOT_FOUND");
   }
 
-  const prev = existente.FOTO_PERFIL_URL ?? existente.fotoPerfilUrl;
-  const publicPath = publicPathForStoredFile(filename);
-  await BeneficiarioModel.updateFotoPerfilUrl(curp, publicPath);
-  unlinkOldProfileIfSafe(prev);
+  // Convertir a base64 y armar el data URL
+  const buffer = fs.readFileSync(filePath);
+  const mime = mimetype || "image/jpeg";
+  const dataUrl = `data:${mime};base64,${buffer.toString("base64")}`;
 
-  return { fotoPerfilUrl: publicPath };
+  // Borrar foto anterior (solo si era un archivo local antiguo, no un data URL)
+  const prev = existente.FOTO_PERFIL_URL ?? existente.fotoPerfilUrl;
+  if (prev && !prev.startsWith("data:")) unlinkOldProfileIfSafe(prev);
+
+  // Guardar el data URL en Oracle — disponible para todos desde la BD compartida
+  await BeneficiarioModel.updateFotoPerfilUrl(curp, dataUrl);
+
+  // Limpiar el archivo temporal del disco
+  try { fs.unlinkSync(filePath); } catch { /* ignorar */ }
+
+  return { fotoPerfilUrl: dataUrl };
 }
 
 /** Quita la foto en BD y borra el archivo bajo uploads/profiles si aplica */
@@ -239,7 +255,8 @@ export async function clearFotoPerfil(curpParam) {
 
   const prev = existente.FOTO_PERFIL_URL ?? existente.fotoPerfilUrl;
   await BeneficiarioModel.updateFotoPerfilUrl(curp, null);
-  unlinkOldProfileIfSafe(prev);
+  // Solo borrar archivo local si era path antiguo (no data URL)
+  if (prev && !prev.startsWith("data:")) unlinkOldProfileIfSafe(prev);
 
   return { fotoPerfilUrl: null };
 }

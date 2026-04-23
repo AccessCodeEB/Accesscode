@@ -37,6 +37,6 @@ const storage = multer.diskStorage({
 
 export const uploadProfilePhoto = multer({
   storage,
-  limits: { fileSize: 2 * 1024 * 1024 },
+  limits: { fileSize: 200 * 1024 }, // 200KB → base64 ≈ 270KB, cabe en VARCHAR2 de Oracle
   fileFilter,
 });

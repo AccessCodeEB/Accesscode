@@ -594,7 +594,7 @@ export function BeneficiariosSection() {
                     <h4 className="text-sm font-bold text-foreground">Foto de perfil</h4>
                     <p className="text-xs text-muted-foreground leading-relaxed">
                       Se sube tal cual (sin recorte circular). <br className="hidden sm:block" />
-                      Formatos: JPEG, PNG o WebP (máx. 2 MB).
+                      Formatos: JPEG, PNG o WebP (máx. 200 KB).
                     </p>
                   </div>
                 </div>
