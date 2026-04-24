@@ -66,6 +66,7 @@ export const create = async ({
     const result = await connection.execute(
       `
       INSERT INTO CITAS (
+        ID_CITA,
         CURP,
         ID_TIPO_SERVICIO,
         ESPECIALISTA,
@@ -74,6 +75,7 @@ export const create = async ({
         NOTAS
       )
       VALUES (
+        SEQ_CITAS.NEXTVAL,
         :curp,
         :idTipoServicio,
         :especialista,
