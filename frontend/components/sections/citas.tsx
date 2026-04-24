@@ -132,8 +132,13 @@ export function CitasSection() {
   }
 
   async function handleGuardar() {
-    if (!form.curp || !form.idTipoServicio || !form.fecha || !form.hora) {
-      setSaveError("Beneficiario, tipo de servicio, fecha y hora son obligatorios.")
+    const missing: string[] = []
+    if (!form.curp) missing.push("beneficiario")
+    if (!form.idTipoServicio) missing.push("tipo de servicio")
+    if (!form.fecha) missing.push("fecha")
+    if (!form.hora) missing.push("hora")
+    if (missing.length > 0) {
+      setSaveError(`Selecciona: ${missing.join(", ")}.`)
       return
     }
     setSaving(true); setSaveError(null)
@@ -366,6 +371,9 @@ export function CitasSection() {
                 </div>
               )}
               {form.curp && <p className="text-xs text-emerald-600 font-medium">✓ CURP: {form.curp}</p>}
+              {!form.curp && buscaBenef && (
+                <p className="text-xs text-amber-600 font-medium">⚠ Selecciona un beneficiario de la lista</p>
+              )}
             </div>
 
             {/* Tipo de Servicio */}

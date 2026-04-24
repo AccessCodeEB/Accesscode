@@ -251,7 +251,7 @@ export function ProfilePhotoUpload({
                 </span>
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="min-w-[11rem]">
+            <DropdownMenuContent align="start" className="min-w-44">
               {sourceMenuItems}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -295,7 +295,7 @@ export function ProfilePhotoUpload({
                 )}
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="min-w-[11rem]">
+            <DropdownMenuContent align="start" className="min-w-44">
               {sourceMenuItems}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -337,7 +337,7 @@ export function ProfilePhotoUpload({
               )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-[11rem]">
+          <DropdownMenuContent align="start" className="min-w-44">
             {sourceMenuItems}
           </DropdownMenuContent>
         </DropdownMenu>
