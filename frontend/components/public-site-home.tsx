@@ -1,34 +1,36 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import Image from "next/image"
 import { Heart, Moon, SunMedium } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { PublicPreregistroSection } from "@/components/public-preregistro-section"
 
 /**
- * Página de inicio para visitantes: bienvenida y pre-registro en ventana emergente.
- * El acceso al panel (login) es una ruta aparte: `/panel`.
+ * Página de inicio para visitantes: bienvenida y pre-registro debajo al pulsar el botón.
+ * El acceso al panel (login) es la ruta `/panel`.
  */
 export function PublicSiteHome() {
   const { setTheme, resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
-  const [preregOpen, setPreregOpen] = useState(false)
-  const [preregFormKey, setPreregFormKey] = useState(0)
+  const [preregVisible, setPreregVisible] = useState(false)
 
   useEffect(() => {
     setMounted(true)
   }, [])
   const isDark = mounted && resolvedTheme === "dark"
+
+  const scrollToPrereg = useCallback(() => {
+    document.getElementById("pre-registro-inline")?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }, [])
+
+  const onLlenarPreregistro = useCallback(() => {
+    setPreregVisible(true)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(scrollToPrereg)
+    })
+  }, [scrollToPrereg])
 
   return (
     <div className="relative flex min-h-screen flex-col bg-background text-foreground">
@@ -73,61 +75,59 @@ export function PublicSiteHome() {
         </div>
       </header>
 
-      <main className="relative z-10 flex w-full flex-1 flex-col items-center justify-center px-4 py-16 md:px-8">
-        <div className="mx-auto w-full max-w-xl text-center">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
-            <Heart className="size-3.5" aria-hidden />
-            Bienvenida
-          </div>
-          <h1 className="text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-            Estamos para acompañarte
-          </h1>
-          <p className="mx-auto mt-5 max-w-md text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
-            Si deseas vincular a una persona beneficiaria, puedes llenar el pre-registro aquí. El equipo de la
-            asociación revisará tus datos y se pondrá en contacto contigo.
-          </p>
+      <main className="relative z-10 flex w-full flex-1 flex-col">
+        <div className="flex flex-1 flex-col items-center justify-center px-4 py-16 md:min-h-[45vh] md:px-8 md:py-20">
+          <div className="mx-auto w-full max-w-xl text-center">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+              <Heart className="size-3.5" aria-hidden />
+              Bienvenida
+            </div>
+            <h1 className="text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+              Estamos para acompañarte
+            </h1>
+            <p className="mx-auto mt-5 max-w-md text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
+              Si deseas vincular a una persona beneficiaria, puedes llenar el pre-registro aquí. El equipo de la
+              asociación revisará tus datos y se pondrá en contacto contigo.
+            </p>
 
-          <Dialog
-            open={preregOpen}
-            onOpenChange={(open) => {
-              setPreregOpen(open)
-              if (!open) setPreregFormKey((k) => k + 1)
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button
-                type="button"
-                size="lg"
-                className="mt-10 rounded-full bg-[#005bb5] px-10 text-base text-white hover:bg-[#004a94]"
-              >
-                Llenar pre-registro
-              </Button>
-            </DialogTrigger>
-            <DialogContent
-              showCloseButton
-              className="top-[5%] max-h-[90vh] w-[calc(100%-2rem)] max-w-3xl translate-y-0 gap-0 overflow-y-auto p-0 sm:top-[5%] sm:max-h-[90vh] sm:translate-y-0"
+            <Button
+              type="button"
+              size="lg"
+              className="mt-10 rounded-full bg-[#005bb5] px-10 text-base text-white hover:bg-[#004a94]"
+              onClick={onLlenarPreregistro}
             >
-              <div id="preregistro-dialog-top" className="sticky top-0 z-10 border-b border-border/60 bg-background/95 px-4 py-4 backdrop-blur-sm sm:px-6">
-                <DialogHeader className="gap-1 text-left">
-                  <DialogTitle>Pre-registro de beneficiario</DialogTitle>
-                  <DialogDescription>
-                    Mismos datos que en la asociación. Puedes cerrar esta ventana y volver cuando quieras; si ya enviaste,
-                    conserva tu CURP.
-                  </DialogDescription>
-                </DialogHeader>
-              </div>
-              <div className="px-4 pb-6 pt-2 sm:px-6">
+              Llenar pre-registro
+            </Button>
+          </div>
+        </div>
+
+        {preregVisible ? (
+          <section
+            id="pre-registro-inline"
+            className="scroll-mt-24 border-t border-border/50 bg-gradient-to-b from-muted/25 via-background to-muted/15 pb-16 pt-12 md:pb-24 md:pt-16"
+            aria-labelledby="titulo-pre-registro-inline"
+          >
+            <div className="mx-auto max-w-3xl px-4 md:px-8">
+              <h2
+                id="titulo-pre-registro-inline"
+                className="text-balance text-center text-2xl font-bold tracking-tight text-foreground md:text-3xl"
+              >
+                Pre-registro de beneficiario
+              </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-pretty text-center text-sm leading-relaxed text-muted-foreground md:text-base">
+                Mismos datos que en la asociación. Si necesitas corregir algo después de enviar, comunícate con nosotros y
+                conserva tu CURP.
+              </p>
+              <div className="mt-10">
                 <PublicPreregistroSection
-                  key={preregFormKey}
                   embedded
                   hideIntro
-                  scrollTargetOnSuccess="preregistro-dialog-top"
-                  onEmbeddedDismiss={() => setPreregOpen(false)}
+                  scrollTargetOnSuccess="pre-registro-inline"
                 />
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+            </div>
+          </section>
+        ) : null}
       </main>
 
       <footer className="relative z-10 border-t border-border/40 py-6 text-center text-xs text-muted-foreground">
