@@ -412,6 +412,112 @@ describe("DELETE /api/v1/citas/:id — cancelar cita", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// CITAS — ramas no cubiertas: fecha inválida + catch de getCitas
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("GET /api/v1/citas — ramas de mapCita no cubiertas", () => {
+  test("FECHA inválida (NaN) → rama else de isNaN: fechaStr desde String(fecha)", async () => {
+    // "2026-99-99" crea Invalid Date → else branch de isNaN
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...citaRow, FECHA: "2026-99-99" }],
+    });
+
+    const res = await request(app).get("/api/v1/citas");
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].fecha).toBe("2026-99-99");
+  });
+
+  test("FECHA inválida con T → hora tomada de parts[1]", async () => {
+    // "9999-99-99T10:30" crea Invalid Date (mes 99 inválido) pero tiene "T"
+    // → parts[1] = "10:30" → horaStr = "10:30"
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...citaRow, FECHA: "9999-99-99T10:30" }],
+    });
+
+    const res = await request(app).get("/api/v1/citas");
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].hora).toBe("10:30");
+  });
+
+  test("error de DB en getCitas → next(error) → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB timeout"));
+
+    const res = await request(app).get("/api/v1/citas");
+
+    expect(res.status).toBe(500);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMINISTRADORES — update y changePassword (ramas no cubiertas)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("PUT /api/v1/administradores/:idAdmin — update", () => {
+  test("actualiza admin existente exitosamente (200)", async () => {
+    // AdminModel.findById → existe
+    mockExecute.mockResolvedValueOnce({ rows: [adminRow] });
+    // RolesModel.findById → existe
+    mockExecute.mockResolvedValueOnce({ rows: [{ ID_ROL: 1 }] });
+    // AdminModel.update
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const res = await request(app)
+      .put("/api/v1/administradores/1")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ idRol: 1, nombreCompleto: "Admin Actualizado", email: "admin@test.com" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/actualizado/i);
+  });
+
+  test("devuelve 404 si admin no existe", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .put("/api/v1/administradores/999")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ idRol: 1, nombreCompleto: "Admin", email: "x@test.com" });
+
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("PATCH /api/v1/administradores/:idAdmin/password — changePassword", () => {
+  test("devuelve 403 si caller != idAdmin (sin llamadas a DB)", async () => {
+    // tokenAdmin tiene idAdmin=1, intentamos cambiar password del admin 2
+    const res = await request(app)
+      .patch("/api/v1/administradores/2/password")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ passwordActual: "pass123", passwordNueva: "newpass123" });
+
+    expect(res.status).toBe(403);
+  });
+
+  test("devuelve 400 si faltan passwordActual o passwordNueva", async () => {
+    // callerIdAdmin=1 === idAdmin=1 → pasa el check de identidad
+    // luego validación lanza 400 por faltar campos
+    const res = await request(app)
+      .patch("/api/v1/administradores/1/password")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({});
+
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("POST /api/v1/administradores/:idAdmin/foto-perfil — uploadFotoPerfil", () => {
+  test("devuelve 400 si no se envía archivo (req.file = undefined)", async () => {
+    const res = await request(app)
+      .post("/api/v1/administradores/1/foto-perfil")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(400);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // BENEFICIARIOS — endpoints sin cobertura
 // ═══════════════════════════════════════════════════════════════════════════════
 

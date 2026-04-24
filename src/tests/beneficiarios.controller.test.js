@@ -286,3 +286,49 @@ describe("DELETE /beneficiarios/:curp/foto-perfil — deleteFotoPerfil", () => {
     expect(res.body.fotoPerfilUrl).toBeNull();
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Catch blocks — cubren next(err) en los handlers no ejercitados
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("Catch blocks de beneficiarios.controller", () => {
+  test("getAll → error de DB → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB timeout"));
+
+    const res = await request(app).get("/beneficiarios");
+
+    expect(res.status).toBe(500);
+  });
+
+  test("deactivate → error de DB → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB timeout"));
+
+    const res = await request(app)
+      .delete(`/api/v1/beneficiarios/${CURP}`)
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(500);
+  });
+
+  test("deleteFotoPerfil → error de DB → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB timeout"));
+
+    const res = await request(app)
+      .delete(`/beneficiarios/${CURP}/foto-perfil`);
+
+    expect(res.status).toBe(500);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// uploadFotoPerfil — sin archivo → badRequest (cubre rama !req.file)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("POST /beneficiarios/:curp/foto-perfil — uploadFotoPerfil sin archivo", () => {
+  test("devuelve 400 si no se envía archivo (req.file = undefined)", async () => {
+    const res = await request(app)
+      .post(`/beneficiarios/${CURP}/foto-perfil`);
+
+    expect(res.status).toBe(400);
+  });
+});

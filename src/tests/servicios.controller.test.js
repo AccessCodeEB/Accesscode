@@ -319,3 +319,81 @@ describe("POST /api/v1/servicios — validación del controlador", () => {
     expect(res.status).toBe(400);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 7. GET /api/v1/servicios — getAll (cubre formatMonto + mapServicio)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("GET /api/v1/servicios — getAll", () => {
+  test("devuelve lista mapeada (200)", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [servicioRow] });
+
+    const res = await request(app).get("/api/v1/servicios");
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body[0].monto).toBe("$200.00");
+  });
+
+  test("fecha como Date instance → mapeada correctamente", async () => {
+    const fecha = new Date("2026-06-01T10:00:00.000Z");
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...servicioRow, FECHA: fecha }],
+    });
+
+    const res = await request(app).get("/api/v1/servicios");
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].fecha).toMatch(/2026-06-0/);
+  });
+
+  test("fecha inválida → fechaStr tomada de String(fecha).slice", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...servicioRow, FECHA: "2026-13-99" }],
+    });
+
+    const res = await request(app).get("/api/v1/servicios");
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].fecha).toBe("2026-13-99");
+  });
+
+  test("FECHA nulo → fechaStr vacío", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...servicioRow, FECHA: null }],
+    });
+
+    const res = await request(app).get("/api/v1/servicios");
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].fecha).toBe("");
+  });
+
+  test("costo nulo → formatMonto devuelve $0.00", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...servicioRow, COSTO: null }],
+    });
+
+    const res = await request(app).get("/api/v1/servicios");
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].monto).toBe("$0.00");
+  });
+
+  test("lista vacía retorna arreglo vacío (200)", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app).get("/api/v1/servicios");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+
+  test("error de base de datos → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB timeout"));
+
+    const res = await request(app).get("/api/v1/servicios");
+
+    expect(res.status).toBe(500);
+  });
+});

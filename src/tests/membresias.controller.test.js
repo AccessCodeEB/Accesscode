@@ -185,6 +185,36 @@ describe("GET /membresias/:curp — getMembresiaStatus", () => {
 // validarMembresiaActiva (GET /:curp/activa)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Catch blocks — cubre next(error) en los tres handlers
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("Catch blocks de membresias.controller", () => {
+  test("getAll → error de DB → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB timeout"));
+
+    const res = await request(app).get("/membresias");
+
+    expect(res.status).toBe(500);
+  });
+
+  test("getMembresiaStatus → error de DB → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB timeout"));
+
+    const res = await request(app).get(`/membresias/${CURP}`);
+
+    expect(res.status).toBe(500);
+  });
+
+  test("validarMembresiaActiva → error de DB → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB timeout"));
+
+    const res = await request(app).get(`/membresias/${CURP}/activa`);
+
+    expect(res.status).toBe(500);
+  });
+});
+
 describe("GET /membresias/:curp/activa — validarMembresiaActiva", () => {
   test("retorna activa: true para membresía vigente (200)", async () => {
     const futuro = new Date();

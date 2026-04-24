@@ -1,0 +1,40 @@
+{
+  "date": "2026-04-23",
+  "window": "7d",
+  "metrics": {
+    "commits": 41,
+    "contributors": 5,
+    "prs_merged": 4,
+    "insertions": 26700,
+    "deletions": 2900,
+    "net_loc": 23800,
+    "test_loc": 2500,
+    "test_ratio": 0.09,
+    "active_days": 5,
+    "sessions": 12,
+    "deep_sessions": 3,
+    "avg_session_minutes": 55,
+    "loc_per_session_hour": 2200,
+    "feat_pct": 0.17,
+    "fix_pct": 0.15,
+    "peak_hour": 16,
+    "ai_assisted_commits": 0
+  },
+  "authors": {
+    "victorvalero6": { "commits": 12, "insertions": 20800, "deletions": 1518, "test_ratio": 0.0, "top_area": "frontend/" },
+    "leobardonm": { "commits": 10, "insertions": 2872, "deletions": 410, "test_ratio": 0.72, "top_area": "src/tests/" },
+    "LeNav23": { "commits": 9, "insertions": 2360, "deletions": 319, "test_ratio": 0.1, "top_area": "src/routes+frontend/inventario" },
+    "GermanMZtec": { "commits": 6, "insertions": 657, "deletions": 91, "test_ratio": 0.0, "top_area": "frontend/servicios" },
+    "santiac1": { "commits": 4, "insertions": 1283, "deletions": 503, "test_ratio": 0.0, "top_area": "src/auth+frontend/citas" }
+  },
+  "version_range": ["1.0.0", "1.0.0"],
+  "streak_days": 3,
+  "personal_streak_days": 1,
+  "tweetable": "Week of Apr 16: 41 commits (5 contributors), 26.7k LOC, 9% tests, 4 PRs, peak: 4pm | Streak: 3d",
+  "test_health": {
+    "total_test_files": 10,
+    "tests_added_this_period": 8,
+    "regression_test_commits": 4,
+    "test_files_changed": 6
+  }
+}
