@@ -196,6 +196,7 @@ export function BeneficiariosSection() {
     handleAltaChange, handleAltaSubmit, handleDarDeBaja,
     fotoUploading, handleUploadFotoBeneficiario, handleDeleteFotoBeneficiario,
     altaFotoPreview, handleAltaFotoSelected,
+    editFotoPreview, handleEditFotoSelected,
   } = useBeneficiarios()
 
   const fotoZoomUrl = selectedBeneficiario
@@ -1035,43 +1036,26 @@ export function BeneficiariosSection() {
             <SectionCard title="Información Personal" icon={User}>
               <div className="mb-8 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 p-5 transition-colors hover:border-primary/40 hover:bg-primary/10">
                 <div className="flex flex-col items-center gap-5 sm:flex-row sm:justify-start">
-                  <div className="shrink-0 relative group">
-                    <ProfilePhotoUpload
-                      variant="form"
-                      size="md"
-                      fotoPerfilUrl={editForm.fotoPerfilUrl}
-                      fallbackText={`${editForm.nombres?.[0] ?? ""}${editForm.apellidoPaterno?.[0] ?? ""}`}
-                      uploading={fotoUploading}
-                      disabled={editForm.estatus === "Baja"}
-                      enableCrop={false}
-                      onFileSelected={(file) =>
-                        handleUploadFotoBeneficiario(
-                          String(editForm.curp ?? editForm.folio ?? "").toUpperCase(),
-                          file
-                        )
-                      }
-                      onRemovePhotoRequest={
-                        editForm.fotoPerfilUrl && editForm.estatus !== "Baja"
-                          ? () => setRemoveFotoConfirmOpen(true)
-                          : undefined
-                      }
-                    />
-                    {/* Botón flotante para eliminar foto si existe */}
-                    {editForm.fotoPerfilUrl && !fotoUploading && editForm.estatus !== "Baja" && (
-                      <button
-                        type="button"
-                        onClick={() => setRemoveFotoConfirmOpen(true)}
-                        className="absolute -top-2 -right-2 bg-background border border-border text-destructive p-1.5 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-white"
-                        title="Eliminar foto"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
-                    )}
-                  </div>
+                  <ProfilePhotoUpload
+                    variant="form"
+                    size="md"
+                    fotoPerfilUrl={editForm.fotoPerfilUrl}
+                    previewSrc={editFotoPreview}
+                    fallbackText={`${editForm.nombres?.[0] ?? ""}${editForm.apellidoPaterno?.[0] ?? ""}`}
+                    uploading={fotoUploading}
+                    disabled={editForm.estatus === "Baja"}
+                    enableCrop={true}
+                    onFileSelected={handleEditFotoSelected}
+                    onRemovePhotoRequest={
+                      (editForm.fotoPerfilUrl || editFotoPreview) && editForm.estatus !== "Baja"
+                        ? () => setRemoveFotoConfirmOpen(true)
+                        : undefined
+                    }
+                  />
                   <div className="text-center sm:text-left space-y-1">
                     <h4 className="text-sm font-bold text-foreground">Actualizar Foto de perfil</h4>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      Se sube tal cual (sin recorte). Haz clic en la imagen o elige archivo. <br className="hidden sm:block" />
+                      Ajusta el encuadre a tu gusto. <br className="hidden sm:block" />
                       Formatos: JPEG, PNG o WebP (máx. 2 MB).
                     </p>
                   </div>

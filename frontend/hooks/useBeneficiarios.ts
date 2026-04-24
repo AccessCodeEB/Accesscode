@@ -306,6 +306,8 @@ export function useBeneficiarios() {
   const [fotoUploading, setFotoUploading]         = useState(false)
   const [altaFotoPreview, setAltaFotoPreview]     = useState<string | null>(null)
   const altaFotoFileRef                         = useRef<File | null>(null)
+  const [editFotoPreview, setEditFotoPreview]     = useState<string | null>(null)
+  const editFotoFileRef                         = useRef<File | null>(null)
   /** Por CURP/folio: incrementa al subir foto para evitar caché del navegador */
   const [fotoBustByCurp, setFotoBustByCurp]     = useState<Record<string, number>>({})
 
@@ -317,6 +319,14 @@ export function useBeneficiarios() {
     altaFotoFileRef.current = null
   }, [])
 
+  const resetEditFoto = useCallback(() => {
+    setEditFotoPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return null
+    })
+    editFotoFileRef.current = null
+  }, [])
+
   const handleAltaFotoSelected = useCallback((file: File) => {
     altaFotoFileRef.current = file
     setAltaFotoPreview((prev) => {
@@ -325,9 +335,21 @@ export function useBeneficiarios() {
     })
   }, [])
 
+  const handleEditFotoSelected = useCallback((file: File) => {
+    editFotoFileRef.current = file
+    setEditFotoPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return URL.createObjectURL(file)
+    })
+  }, [])
+
   useEffect(() => {
     if (!showAltaDialog) resetAltaFoto()
   }, [showAltaDialog, resetAltaFoto])
+
+  useEffect(() => {
+    if (!showEditDialog) resetEditFoto()
+  }, [showEditDialog, resetEditFoto])
 
   useEffect(() => {
     getBeneficiarios()
@@ -450,7 +472,7 @@ export function useBeneficiarios() {
       })()
       await updateBeneficiario(editForm.folio, {
         ...editForm,
-        tipoSangre: tipoSangrePayload,
+        tipoSangre: tipoSangrePayload ?? undefined,
         usaValvula: (editForm.usaValvula ? "S" : "N") as unknown as boolean,
       })
 
@@ -460,6 +482,22 @@ export function useBeneficiarios() {
         (nuevoEstatus === "Activo" || nuevoEstatus === "Inactivo")
       ) {
         await updateEstatusBeneficiario(editForm.folio, nuevoEstatus)
+      }
+
+      // Subir foto solo si el usuario la cambio durante la edicion
+      const curp = String(editForm.folio).toUpperCase()
+      if (editFotoFileRef.current) {
+        try {
+          const { fotoPerfilUrl } = await uploadBeneficiarioFotoPerfil(curp, editFotoFileRef.current)
+          setEditForm((prev) => ({ ...prev, fotoPerfilUrl }))
+          setFotoBustByCurp((prev) => ({ ...prev, [curp]: (prev[curp] ?? 0) + 1 }))
+          setBeneficiarios((prev) =>
+            prev.map((b) => (matchesCurp(b, curp) ? { ...b, fotoPerfilUrl } : b))
+          )
+          resetEditFoto()
+        } catch (err: unknown) {
+          toast.error(err instanceof Error ? err.message : "No se pudo subir la foto")
+        }
       }
 
       setBeneficiarios((prev) =>
@@ -555,7 +593,7 @@ export function useBeneficiarios() {
         telefonoEmergencia: emergenciaDigits,
         cp: cpDigits,
         correoElectronico: String(altaForm.correoElectronico ?? "").trim(),
-        tipoSangre: tipoSangreAlta,
+        tipoSangre: tipoSangreAlta ?? undefined,
         usaValvula: (altaForm.usaValvula ? "S" : "N") as unknown as boolean,
         tipo:     "",
         ciudad:   altaForm.ciudad,
@@ -654,6 +692,8 @@ export function useBeneficiarios() {
     handleDeleteFotoBeneficiario,
     altaFotoPreview,
     handleAltaFotoSelected,
+    editFotoPreview,
+    handleEditFotoSelected,
     fotoBustByCurp,
   }
 }
