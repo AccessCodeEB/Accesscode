@@ -1,127 +1,61 @@
+import oracledb from "oracledb";
 import { getConnection } from "../config/db.js";
 import { HttpError } from "../utils/httpErrors.js";
 
-function insufficientStockError(disponible) {
-  return new HttpError(422, "Stock insuficiente", "INSUFFICIENT_STOCK", { disponible });
-}
-
-function hasMissingStockResultanteColumn(err) {
-  const msg = String(err?.message ?? "").toUpperCase();
-  return msg.includes("ORA-00904") && msg.includes("STOCK_RESULTANTE");
-}
-
-function calcularNuevoStock(stockActual, tipo, cantidad) {
-  if (tipo === "ENTRADA") {
-    return stockActual + cantidad;
-  }
-
-  if (stockActual < cantidad) {
-    throw insufficientStockError(stockActual);
-  }
-
-  return stockActual - cantidad;
-}
-
+/**
+ * Registra un movimiento de inventario usando SP_REGISTRAR_MOVIMIENTO_INVENTARIO.
+ * Recibe una conexión existente — el caller hace commit/rollback.
+ */
 export async function applyMovimientoConConexion(conn, data) {
-  const articuloResult = await conn.execute(
-    `SELECT ID_ARTICULO, INVENTARIO_ACTUAL
-     FROM ARTICULOS
-     WHERE ID_ARTICULO = :idArticulo
-     FOR UPDATE`,
-    { idArticulo: data.idArticulo }
-  );
-
-  const articulo = articuloResult?.rows?.[0];
-  if (!articulo) {
-    throw new HttpError(404, "Producto no encontrado", "PRODUCT_NOT_FOUND");
-  }
-
-  const stockActual = Number(articulo.INVENTARIO_ACTUAL || 0);
-  const stockResultante = calcularNuevoStock(stockActual, data.tipo, data.cantidad);
-
+  let stockResultante;
   try {
-    await conn.execute(
-      `INSERT INTO MOVIMIENTOS_INVENTARIO (
-         ID_ARTICULO,
-         TIPO_MOVIMIENTO,
-         CANTIDAD,
-         MOTIVO,
-         FECHA,
-         STOCK_RESULTANTE
-       ) VALUES (
-         :idArticulo,
-         :tipo,
-         :cantidad,
-         :motivo,
-         SYSDATE,
-         :stockResultante
-       )`,
+    const result = await conn.execute(
+      `BEGIN
+         SP_REGISTRAR_MOVIMIENTO_INVENTARIO(
+           :art, :tipo, :cant, :motivo, :stock_out
+         );
+       END;`,
       {
-        idArticulo: data.idArticulo,
-        tipo: data.tipo,
-        cantidad: data.cantidad,
-        motivo: data.motivo ?? null,
-        stockResultante,
+        art:      data.idArticulo,
+        tipo:     data.tipo,
+        cant:     data.cantidad,
+        motivo:   data.motivo ?? null,
+        stock_out: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
       }
     );
+    stockResultante = result.outBinds.stock_out;
   } catch (err) {
-    if (!hasMissingStockResultanteColumn(err)) {
-      throw err;
+    if (err.errorNum === 20002 || err.errorNum === 20001) {
+      throw new HttpError(422, "Stock insuficiente", "INSUFFICIENT_STOCK", {});
     }
-
-    // Compatibilidad con esquemas que aún no tienen la columna STOCK_RESULTANTE.
-    await conn.execute(
-      `INSERT INTO MOVIMIENTOS_INVENTARIO (
-         ID_ARTICULO,
-         TIPO_MOVIMIENTO,
-         CANTIDAD,
-         MOTIVO,
-         FECHA
-       ) VALUES (
-         :idArticulo,
-         :tipo,
-         :cantidad,
-         :motivo,
-         SYSDATE
-       )`,
-      {
-        idArticulo: data.idArticulo,
-        tipo: data.tipo,
-        cantidad: data.cantidad,
-        motivo: data.motivo ?? null,
-      }
-    );
+    if (err.errorNum === 20006) {
+      throw new HttpError(404, "Producto no encontrado", "PRODUCT_NOT_FOUND");
+    }
+    if (err.errorNum === 20005) {
+      throw new HttpError(400, "Tipo de movimiento inválido", "INVALID_MOVIMIENTO_TIPO");
+    }
+    throw err;
   }
-
-  await conn.execute(
-    `UPDATE ARTICULOS
-     SET INVENTARIO_ACTUAL = :stockResultante
-     WHERE ID_ARTICULO = :idArticulo`,
-    {
-      idArticulo: data.idArticulo,
-      stockResultante,
-    }
-  );
 
   return {
-    idProducto: data.idArticulo,
-    tipo: data.tipo,
-    cantidad: data.cantidad,
-    fecha: new Date().toISOString(),
+    idProducto:     data.idArticulo,
+    tipo:           data.tipo,
+    cantidad:       data.cantidad,
+    fecha:          new Date().toISOString(),
     stockResultante,
-    stockActual: stockResultante,
+    stockActual:    stockResultante,
   };
 }
 
+/**
+ * Versión standalone: abre su propia conexión, hace commit/rollback.
+ */
 export async function createMovimientoConTransaccion(data) {
   let conn;
   try {
     conn = await getConnection();
-
     const movimiento = await applyMovimientoConConexion(conn, data);
-
     await conn.commit();
-
     return movimiento;
   } catch (err) {
     if (conn) await conn.rollback();
@@ -149,40 +83,20 @@ export async function findInventarioActual() {
 export async function findMovimientos() {
   const conn = await getConnection();
   try {
-    try {
-      const result = await conn.execute(
-        `SELECT M.ID_MOVIMIENTO,
-                M.ID_ARTICULO,
-                A.DESCRIPCION,
-                M.TIPO_MOVIMIENTO,
-                M.CANTIDAD,
-                M.MOTIVO,
-                M.FECHA,
-                M.STOCK_RESULTANTE
-        FROM MOVIMIENTOS_INVENTARIO M
-         JOIN ARTICULOS A ON A.ID_ARTICULO = M.ID_ARTICULO
-         ORDER BY M.FECHA DESC, M.ID_MOVIMIENTO DESC`
-      );
-      return result?.rows ?? [];
-    } catch (err) {
-      if (!hasMissingStockResultanteColumn(err)) {
-        throw err;
-      }
-
-      const result = await conn.execute(
-        `SELECT M.ID_MOVIMIENTO,
-                M.ID_ARTICULO,
-                A.DESCRIPCION,
-                M.TIPO_MOVIMIENTO,
-                M.CANTIDAD,
-                M.MOTIVO,
-                M.FECHA
-        FROM MOVIMIENTOS_INVENTARIO M
-         JOIN ARTICULOS A ON A.ID_ARTICULO = M.ID_ARTICULO
-         ORDER BY M.FECHA DESC, M.ID_MOVIMIENTO DESC`
-      );
-      return result?.rows ?? [];
-    }
+    const result = await conn.execute(
+      `SELECT M.ID_MOVIMIENTO,
+              M.ID_ARTICULO,
+              A.DESCRIPCION,
+              M.TIPO_MOVIMIENTO,
+              M.CANTIDAD,
+              M.MOTIVO,
+              M.FECHA,
+              M.STOCK_RESULTANTE
+       FROM MOVIMIENTOS_INVENTARIO M
+        JOIN ARTICULOS A ON A.ID_ARTICULO = M.ID_ARTICULO
+        ORDER BY M.FECHA DESC, M.ID_MOVIMIENTO DESC`
+    );
+    return result?.rows ?? [];
   } finally {
     await conn.close();
   }
@@ -193,11 +107,10 @@ export async function countMovimientosByArticulo(idArticulo) {
   try {
     const result = await conn.execute(
       `SELECT COUNT(*) AS TOTAL
-      FROM MOVIMIENTOS_INVENTARIO
-       WHERE ID_ARTICULO = :idArticulo`,
+       FROM MOVIMIENTOS_INVENTARIO
+        WHERE ID_ARTICULO = :idArticulo`,
       { idArticulo }
     );
-
     return Number(result.rows[0].TOTAL || 0);
   } finally {
     await conn.close();

@@ -35,18 +35,14 @@ beforeEach(() => { resetMocks(); });
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe("POST /api/v1/movimientos — crear movimiento de inventario", () => {
-  test("registra ENTRADA exitosamente (201)", async () => {
-    // SELECT FOR UPDATE → artículo con stock
-    mockExecute.mockResolvedValueOnce({ rows: [articuloRow] });
-    // INSERT MOVIMIENTOS_INVENTARIO
-    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
-    // UPDATE ARTICULOS (nuevo stock)
-    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+  test("registra ENTRADA exitosamente via SP (201)", async () => {
+    // SP call returns stock resultante via OUT bind
+    mockExecute.mockResolvedValueOnce({ outBinds: { stock_out: 15 } });
 
     const res = await request(app)
       .post("/api/v1/movimientos")
       .set("Authorization", `Bearer ${tokenAdmin}`)
-      .send(movimientoBase);
+      .send(movimientoBase); // idArticulo: 101, tipo: ENTRADA, cantidad: 5
 
     expect(res.status).toBe(201);
     expect(res.body.message).toMatch(/registrado/i);
@@ -54,10 +50,8 @@ describe("POST /api/v1/movimientos — crear movimiento de inventario", () => {
     expect(mockCommit).toHaveBeenCalled();
   });
 
-  test("registra SALIDA exitosamente (201)", async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [{ ID_ARTICULO: 101, INVENTARIO_ACTUAL: 20 }] });
-    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
-    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+  test("registra SALIDA exitosamente via SP (201)", async () => {
+    mockExecute.mockResolvedValueOnce({ outBinds: { stock_out: 17 } });
 
     const res = await request(app)
       .post("/api/v1/movimientos")
@@ -68,8 +62,12 @@ describe("POST /api/v1/movimientos — crear movimiento de inventario", () => {
     expect(res.body.data.stockActual).toBe(17);
   });
 
-  test("devuelve 422 si stock insuficiente para SALIDA", async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [{ ID_ARTICULO: 101, INVENTARIO_ACTUAL: 2 }] });
+  test("devuelve 422 si stock insuficiente para SALIDA (via SP ORA-20002)", async () => {
+    const oraErr = Object.assign(
+      new Error("ORA-20002: Stock insuficiente para SALIDA"),
+      { errorNum: 20002 }
+    );
+    mockExecute.mockRejectedValueOnce(oraErr);
 
     const res = await request(app)
       .post("/api/v1/movimientos")
@@ -80,8 +78,12 @@ describe("POST /api/v1/movimientos — crear movimiento de inventario", () => {
     expect(mockRollback).toHaveBeenCalled();
   });
 
-  test("devuelve 404 si el artículo no existe", async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [] });
+  test("devuelve 404 si el artículo no existe (via SP ORA-20006)", async () => {
+    const oraErr = Object.assign(
+      new Error("ORA-20006: Articulo no encontrado: 101"),
+      { errorNum: 20006 }
+    );
+    mockExecute.mockRejectedValueOnce(oraErr);
 
     const res = await request(app)
       .post("/api/v1/movimientos")
@@ -151,9 +153,7 @@ describe("POST /api/v1/movimientos — crear movimiento de inventario", () => {
   });
 
   test("recepción (rol 2) también puede crear movimientos", async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [articuloRow] });
-    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
-    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+    mockExecute.mockResolvedValueOnce({ outBinds: { stock_out: 15 } });
 
     const res = await request(app)
       .post("/api/v1/movimientos")
