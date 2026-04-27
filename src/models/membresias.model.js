@@ -1,4 +1,6 @@
+import oracledb from "oracledb";
 import { getConnection } from "../config/db.js";
+import { HttpError } from "../utils/httpErrors.js";
 
 export async function findAll() {
   const conn = await getConnection();
@@ -156,39 +158,42 @@ export async function create({
   fechaUltimoPago,
   observaciones,
 }) {
+  const toDate = (v) => {
+    if (!v) return null;
+    return v instanceof Date ? v : new Date(v);
+  };
+
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `INSERT INTO CREDENCIALES (
-         CURP,
-         NUMERO_CREDENCIAL,
-         FECHA_EMISION,
-         FECHA_VIGENCIA_INICIO,
-         FECHA_VIGENCIA_FIN,
-         FECHA_ULTIMO_PAGO,
-         OBSERVACIONES
-       ) VALUES (
-         :curp,
-         :numeroCredencial,
-         TO_DATE(:fechaEmision, 'YYYY-MM-DD'),
-         TO_DATE(:fechaVigenciaInicio, 'YYYY-MM-DD'),
-         TO_DATE(:fechaVigenciaFin, 'YYYY-MM-DD'),
-         CASE WHEN :fechaUltimoPago IS NULL THEN NULL ELSE TO_DATE(:fechaUltimoPago, 'YYYY-MM-DD') END,
-         :observaciones
-       )`,
+      `BEGIN
+         SP_REGISTRAR_MEMBRESIA(
+           :curp, :num, :ini, :fin, :pago,
+           :emision, :obs, :id_out
+         );
+       END;`,
       {
-        curp,
-        numeroCredencial,
-        fechaEmision,
-        fechaVigenciaInicio,
-        fechaVigenciaFin,
-        fechaUltimoPago: fechaUltimoPago ?? null,
-        observaciones: observaciones ?? null,
-      },
-      { autoCommit: true }
+        curp:    curp,
+        num:     numeroCredencial,
+        ini:     { val: toDate(fechaVigenciaInicio), type: oracledb.DB_TYPE_DATE },
+        fin:     { val: toDate(fechaVigenciaFin),    type: oracledb.DB_TYPE_DATE },
+        pago:    { val: toDate(fechaUltimoPago),     type: oracledb.DB_TYPE_DATE },
+        emision: { val: toDate(fechaEmision),        type: oracledb.DB_TYPE_DATE },
+        obs:     observaciones ?? null,
+        id_out:  { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      }
     );
-
-    return result;
+    await conn.commit();
+    return result;   // backward-compat: callers don't use the return value
+  } catch (err) {
+    await conn.rollback();
+    if (err.errorNum === 20003) {
+      throw new HttpError(403, "Beneficiario en Baja", "BENEFICIARIO_BAJA");
+    }
+    if (err.errorNum === 20004) {
+      throw new HttpError(404, "Beneficiario no encontrado", "NOT_FOUND");
+    }
+    throw err;
   } finally {
     await conn.close();
   }
