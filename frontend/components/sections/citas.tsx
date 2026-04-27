@@ -199,7 +199,7 @@ export function CitasSection() {
       </div>
 
       {/* Calendar + Day panel */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-7 items-start">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-7">
         <Card className="border-border/60 shadow-sm lg:col-span-4 rounded-2xl overflow-hidden">
           <CardHeader className="pb-2 pt-6 px-6">
             <div className="flex items-center justify-between">
@@ -245,8 +245,8 @@ export function CitasSection() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 shadow-sm lg:col-span-3 rounded-2xl bg-muted/10">
-          <CardHeader className="pb-4 pt-6 px-6 border-b border-border/40">
+        <Card className="border-border/60 shadow-sm lg:col-span-3 rounded-2xl bg-muted/10 flex flex-col">
+          <CardHeader className="pb-4 pt-6 px-6 border-b border-border/40 shrink-0">
             <CardTitle className="text-lg font-bold">
               {selectedDay ? `${selectedDay} de ${MESES[calMonth]}` : "Seleccione un día"}
             </CardTitle>
@@ -254,14 +254,15 @@ export function CitasSection() {
               {citasDelDia.length} cita{citasDelDia.length !== 1 ? "s" : ""} programada{citasDelDia.length !== 1 ? "s" : ""}
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-6">
-            {citasDelDia.length === 0 ? (
-              <div className="flex h-32 items-center justify-center">
-                <p className="text-sm text-muted-foreground">No hay citas para este día.</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2">
-                {citasDelDia.map(cita => (
+          <CardContent className="p-0 flex-1 relative min-h-[250px]">
+            <div className="absolute inset-0 p-6 overflow-y-auto">
+              {citasDelDia.length === 0 ? (
+                <div className="flex h-full items-center justify-center">
+                  <p className="text-sm text-muted-foreground">No hay citas para este día.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {citasDelDia.map(cita => (
                   <div key={cita.id} className="rounded-xl border border-border/60 bg-background p-4 shadow-sm transition-shadow hover:shadow-md">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex flex-col gap-0.5">
@@ -302,7 +303,8 @@ export function CitasSection() {
                   </div>
                 ))}
               </div>
-            )}
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
