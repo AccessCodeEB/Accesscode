@@ -199,7 +199,7 @@ export function CitasSection() {
       </div>
 
       {/* Calendar + Day panel */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-7">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-7 items-start">
         <Card className="border-border/60 shadow-sm lg:col-span-4 rounded-2xl overflow-hidden">
           <CardHeader className="pb-2 pt-6 px-6">
             <div className="flex items-center justify-between">
@@ -317,10 +317,11 @@ export function CitasSection() {
           {proximas.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">No hay citas próximas programadas.</p>
           ) : (
-            <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {proximas.map(cita => (
-                <div key={cita.id} className="flex flex-col gap-3 rounded-xl border border-border/60 bg-background p-4 transition-colors hover:border-primary/30 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex flex-col gap-1.5">
+                <div key={cita.id} className="flex flex-col gap-3 rounded-xl border border-border/60 bg-background p-4 transition-all hover:shadow-md hover:border-primary/40 relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary transition-colors" />
+                  <div className="flex flex-col gap-1.5 pl-2">
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-xs font-semibold text-primary">{cita.folio}</span>
                       <span className="text-sm font-bold text-foreground">{cita.beneficiario}</span>
@@ -331,7 +332,8 @@ export function CitasSection() {
                       <span>{cita.especialista}</span>
                     </div>
                   </div>
-                  <div className="self-end sm:self-center">
+                  <div className="mt-2 pt-3 border-t border-border/40 flex justify-between items-center pl-2">
+                    <span className="text-xs font-medium text-muted-foreground">Estatus:</span>
                     <CitaStatusBadge status={cita.estatus} />
                   </div>
                 </div>
