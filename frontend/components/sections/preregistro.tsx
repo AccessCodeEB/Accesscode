@@ -1,7 +1,23 @@
 "use client"
 
+import Link from "next/link"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Search, Eye, Clock, UserPlus, Loader2, X, Inbox, Check, Zap, Info } from "lucide-react"
+import {
+  Search,
+  Eye,
+  ExternalLink,
+  Clock,
+  Loader2,
+  RefreshCw,
+  X,
+  Inbox,
+  Check,
+  Info,
+  User,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUp,
+} from "lucide-react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -31,7 +47,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { PublicPreregistroSection } from "@/components/public-preregistro-section"
 import {
   getBeneficiarios,
   aprobarPreRegistroBeneficiario,
@@ -39,6 +54,9 @@ import {
   type Beneficiario,
 } from "@/services/beneficiarios"
 import { esSolicitudPublicaPendiente, MARCADOR_SOLICITUD_PUBLICA_PENDIENTE } from "@/lib/solicitud-publica-beneficiario"
+import { resolvePublicUploadUrl } from "@/lib/media-url"
+import { labelTipoEspinaBifida } from "@/lib/beneficiario-alta"
+import { cn } from "@/lib/utils"
 
 function nombreCompleto(b: Beneficiario): string {
   return `${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno}`.trim()
@@ -58,12 +76,13 @@ export function PreregistroSection() {
   const [searchTerm, setSearchTerm] = useState("")
   const [showDetalleDialog, setShowDetalleDialog] = useState(false)
   const [selected, setSelected] = useState<Beneficiario | null>(null)
-  const [showFormularioPublico, setShowFormularioPublico] = useState(false)
   const [accionCurp, setAccionCurp] = useState<string | null>(null)
   
   // Estados para los pop-ups de confirmación
   const [confirmRechazar, setConfirmRechazar] = useState(false)
   const [confirmAprobar, setConfirmAprobar] = useState(false)
+  /** Índice dentro de `pendientes` para la tarjeta «Revisión rápida» */
+  const [quickReviewIndex, setQuickReviewIndex] = useState(0)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -102,7 +121,43 @@ export function PreregistroSection() {
     })
   }, [pendientes, searchTerm])
 
-  const solicitudRapida = pendientes.length > 0 ? pendientes[0] : null;
+  useEffect(() => {
+    setQuickReviewIndex((i) => {
+      const n = pendientes.length
+      if (n === 0) return 0
+      return Math.min(i, n - 1)
+    })
+  }, [pendientes.length])
+
+  const solicitudRapida =
+    pendientes.length > 0 ? pendientes[quickReviewIndex] ?? pendientes[0] : null
+
+  const goPrevQuick = useCallback(() => {
+    setQuickReviewIndex((i) => {
+      const n = pendientes.length
+      if (n <= 1) return 0
+      return i <= 0 ? n - 1 : i - 1
+    })
+  }, [pendientes.length])
+
+  const goNextQuick = useCallback(() => {
+    setQuickReviewIndex((i) => {
+      const n = pendientes.length
+      if (n <= 1) return 0
+      return i >= n - 1 ? 0 : i + 1
+    })
+  }, [pendientes.length])
+
+  const fotoRevisionRapidaSrc = useMemo(
+    () =>
+      solicitudRapida
+        ? resolvePublicUploadUrl(
+            solicitudRapida.fotoPerfilUrl ?? undefined,
+            solicitudRapida.folio
+          )
+        : undefined,
+    [solicitudRapida?.folio, solicitudRapida?.fotoPerfilUrl]
+  )
 
   async function onAprobarConfirmado() {
     if (!selected) return
@@ -151,14 +206,15 @@ export function PreregistroSection() {
             Gestión de solicitudes recibidas desde el portal web.
           </p>
         </div>
-        <Button
-          size="lg"
-          variant="outline"
-          className="gap-2 w-full sm:w-auto shadow-sm hover:bg-slate-50 dark:hover:bg-slate-900"
-          onClick={() => setShowFormularioPublico(true)}
-        >
-          <Eye className="size-5" />
-          Ver formulario público
+        <Button asChild size="lg" variant="outline" className="w-full sm:w-auto shadow-sm hover:bg-slate-50 dark:hover:bg-slate-900">
+          <Link
+            href="/#seccion-registro"
+            className="inline-flex items-center justify-center gap-2 no-underline"
+            title="Abrir el sitio público de la asociación"
+          >
+            <ExternalLink className="size-5 shrink-0" aria-hidden />
+            Ver sitio público
+          </Link>
         </Button>
       </div>
 
@@ -176,15 +232,29 @@ export function PreregistroSection() {
               </div>
             </CardContent>
           </Card>
-          
-          <Card className="group flex-1 border-border/50 bg-background/50 backdrop-blur-sm shadow-sm transition-all duration-300 hover:shadow-md hover:border-emerald-200/60 dark:hover:border-emerald-900/50">
-            <CardContent className="flex items-center gap-5 p-5 h-full">
-              <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 transition-transform duration-300 group-hover:scale-110 dark:bg-emerald-500/20 dark:text-emerald-400">
-                <UserPlus className="size-6" />
+
+          <Card
+            role="button"
+            tabIndex={0}
+            className="group flex-1 cursor-pointer border-border/50 bg-background/50 backdrop-blur-sm shadow-sm outline-none transition-all duration-300 hover:border-sky-200/60 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:hover:border-sky-900/50"
+            onClick={() => window.location.reload()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                window.location.reload()
+              }
+            }}
+            aria-label="Refrescar la página y volver a cargar las solicitudes"
+          >
+            <CardContent className="flex h-full items-center gap-5 p-5">
+              <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-sky-600 transition-transform duration-300 group-hover:scale-110 group-active:scale-95 dark:bg-sky-500/20 dark:text-sky-400">
+                <RefreshCw className="size-6" aria-hidden />
               </div>
-              <div className="flex flex-col justify-center">
-                <p className="text-sm font-medium text-muted-foreground tracking-tight">Filtrados en tabla</p>
-                <p className="text-3xl font-bold tracking-tighter text-foreground leading-tight">{filtered.length}</p>
+              <div className="flex min-w-0 flex-1 flex-col justify-center">
+                <p className="text-sm font-semibold text-foreground tracking-tight">Refrescar página</p>
+                <p className="mt-1 text-sm font-medium leading-snug text-muted-foreground">
+                  Click para recargar la pagina y ver los datos mas actualizados
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -192,97 +262,164 @@ export function PreregistroSection() {
 
         {/* Columna Derecha: Revisión Rápida */}
         <div className="lg:col-span-8 flex flex-col h-full">
-          {!loading && solicitudRapida && !searchTerm ? (
-            <Card className="relative flex-1 flex flex-col border-border/60 shadow-md bg-white hover:shadow-lg transition-shadow duration-300 overflow-hidden dark:bg-slate-900">
-              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500/90 rounded-l-xl"></div>
-              
-              <CardHeader className="pb-2 pt-5 pl-7">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-blue-600 dark:text-blue-400">
-                    <Zap className="size-4 fill-current" />
-                    Revisión Rápida
-                  </CardTitle>
-                </div>
-                <CardDescription className="text-xs mt-1">
-                  Evalúa la siguiente solicitud en cola para agilizar el proceso.
-                </CardDescription>
-              </CardHeader>
-              
-              <CardContent className="flex-1 flex flex-col justify-center pl-7 pb-6 pt-2">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 h-full">
-                  
-                  <div className="flex-1 w-full flex flex-col justify-center space-y-5">
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-1">Solicitante</p>
-                      <h3 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight leading-none mb-1.5">
-                        {nombreCompleto(solicitudRapida)}
-                      </h3>
-                      <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                        <span className="inline-block size-1.5 rounded-full bg-muted-foreground/30"></span>
-                        {solicitudRapida.ciudad ? `${solicitudRapida.ciudad}, ` : ""}{solicitudRapida.estado ?? "Sin ubicación"}
-                      </p>
+          {!loading && solicitudRapida ? (
+            <Card
+              id="revision-rapida-preregistro"
+              className="relative flex min-h-[336px] scroll-mt-24 flex-col overflow-hidden border-border/60 bg-white shadow-md transition-shadow duration-300 hover:shadow-lg dark:bg-slate-900 md:min-h-[380px]"
+            >
+              <div className="absolute bottom-0 left-0 top-0 w-1.5 rounded-l-xl bg-blue-500/90"></div>
+
+              <CardContent className="flex min-h-0 flex-1 flex-col pl-7 pr-4 pb-4 pt-4">
+                <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-6">
+                  <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden">
+                    <div className="flex shrink-0 items-center gap-4">
+                      <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800 sm:size-16">
+                        {fotoRevisionRapidaSrc ? (
+                          <img
+                            src={fotoRevisionRapidaSrc}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <User className="size-7 text-slate-400" />
+                        )}
+                      </div>
+
+                      {/* Datos del Solicitante */}
+                      <div className="min-w-0">
+                        <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                          Solicitante
+                        </p>
+                        <h3 className="mb-1.5 text-xl font-extrabold leading-none tracking-tight text-foreground sm:text-2xl">
+                          {nombreCompleto(solicitudRapida)}
+                        </h3>
+                        <p className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+                          <span className="inline-block size-2 rounded-full bg-emerald-500"></span>
+                          {solicitudRapida.ciudad ? `${solicitudRapida.ciudad}, ` : ""}
+                          {solicitudRapida.estado ?? "Sin ubicación"}
+                        </p>
+                      </div>
                     </div>
-                    
-                    <div className="relative pl-4 border-l-2 border-muted bg-slate-50/50 py-2.5 pr-4 rounded-r-lg dark:bg-slate-800/20">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-1">
+
+                    <div className="relative min-h-0 flex-1 overflow-hidden rounded-r-lg border-l-2 border-muted bg-slate-50/50 py-2.5 pl-4 pr-3 dark:bg-slate-800/20">
+                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
                         Motivo / Notas breves
                       </p>
-                      <p className="text-sm text-foreground/80 leading-relaxed italic line-clamp-2">
-                        "{notasSinMarcador(solicitudRapida.notas) || "Sin observaciones adicionales reportadas por el usuario."}"
-                      </p>
+                      <div className="max-h-[72px] overflow-y-auto overscroll-contain pr-1">
+                        <p className="text-sm italic leading-relaxed text-foreground/80">
+                          &quot;
+                          {notasSinMarcador(solicitudRapida.notas) ||
+                            "Sin observaciones adicionales reportadas por el usuario."}
+                          &quot;
+                        </p>
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        <div>
+                          <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                            Tipo de espina bífida
+                          </p>
+                          <p className="text-sm font-semibold text-foreground">
+                            {labelTipoEspinaBifida(solicitudRapida.tipo)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                            Número de teléfono
+                          </p>
+                          <p className="text-sm font-semibold tabular-nums text-foreground">
+                            {solicitudRapida.telefonoCelular?.trim() || "—"}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 shrink-0 bg-slate-50 p-2.5 rounded-2xl border border-border/40 dark:bg-slate-800/50">
-                    {/* Botón Rechazar -> Abre Modal Confirmación */}
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 md:flex-nowrap md:gap-4">
                     <Button
                       size="icon"
-                      variant="ghost"
-                      className="size-12 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors"
-                      disabled={accionCurp === String(solicitudRapida.folio).toUpperCase()}
-                      onClick={() => {
-                        setSelected(solicitudRapida)
-                        setConfirmRechazar(true) // Lanza el pop-up de rechazar
-                      }}
-                      title="Rechazar solicitud"
-                    >
-                      <X className="size-6 stroke-[2.5]" />
-                    </Button>
-
-                    <div className="w-px h-8 bg-border/60 mx-1"></div>
-
-                    {/* Botón Detalles */}
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="size-12 rounded-xl text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-colors dark:text-blue-400 dark:hover:bg-blue-900/30"
+                      variant="outline"
+                      className="size-12 rounded-full border-2 border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                       onClick={() => {
                         setSelected(solicitudRapida)
                         setShowDetalleDialog(true)
                       }}
                       title="Ver detalles completos"
                     >
-                      <Info className="size-5 stroke-[2.5]" />
+                      <Info className="size-6 stroke-[2]" />
                     </Button>
 
-                    {/* Botón Aprobar -> Abre Modal Confirmación */}
-                    <Button
-                      size="icon"
-                      className="size-14 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95 ml-1"
-                      disabled={accionCurp === String(solicitudRapida.folio).toUpperCase()}
-                      onClick={() => {
-                        setSelected(solicitudRapida)
-                        setConfirmAprobar(true) // Lanza el pop-up de aprobar
-                      }}
-                      title="Aprobar solicitud"
-                    >
-                      {accionCurp === String(solicitudRapida.folio).toUpperCase() ? (
-                        <Loader2 className="size-6 animate-spin" />
-                      ) : (
-                        <Check className="size-7 stroke-[3]" />
+                    <div
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-2xl border border-border/60 bg-slate-50 p-2 shadow-sm dark:bg-slate-800/50",
+                        // Hover en X → el check pierde el bloque verde (solo icono gris)
+                        "[&:has(.quick-review-reject:hover)_.quick-review-approve]:scale-100 [&:has(.quick-review-reject:hover)_.quick-review-approve]:bg-transparent [&:has(.quick-review-reject:hover)_.quick-review-approve]:shadow-none [&:has(.quick-review-reject:hover)_.quick-review-approve]:text-slate-500 [&:has(.quick-review-reject:hover)_.quick-review-approve:hover]:bg-transparent [&:has(.quick-review-reject:hover)_.quick-review-approve:hover]:text-slate-600 dark:[&:has(.quick-review-reject:hover)_.quick-review-approve]:text-slate-400 dark:[&:has(.quick-review-reject:hover)_.quick-review-approve:hover]:text-slate-300",
+                        // Hover en check → la X solo en gris, sin contorno
+                        "[&:has(.quick-review-approve:hover)_.quick-review-reject]:scale-100 [&:has(.quick-review-approve:hover)_.quick-review-reject]:border-transparent [&:has(.quick-review-approve:hover)_.quick-review-reject]:bg-transparent [&:has(.quick-review-approve:hover)_.quick-review-reject]:text-slate-500 [&:has(.quick-review-approve:hover)_.quick-review-reject]:shadow-none dark:[&:has(.quick-review-approve:hover)_.quick-review-reject]:text-slate-400"
                       )}
-                    </Button>
+                    >
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="quick-review-reject size-12 rounded-xl border-transparent bg-destructive/10 text-destructive shadow-md shadow-destructive/15 transition-all hover:scale-105 hover:border-transparent hover:bg-destructive/15 hover:text-destructive active:scale-95 dark:border-transparent dark:bg-destructive/15 dark:shadow-destructive/20 dark:hover:bg-destructive/20"
+                        disabled={accionCurp === String(solicitudRapida.folio).toUpperCase()}
+                        onClick={() => {
+                          setSelected(solicitudRapida)
+                          setConfirmRechazar(true)
+                        }}
+                        title="Rechazar solicitud"
+                      >
+                        <X className="size-6 stroke-[2.5]" />
+                      </Button>
+
+                      <Button
+                        size="icon"
+                        className="quick-review-approve size-12 rounded-xl bg-emerald-500 text-white shadow-[0_2px_6px_rgba(0,0,0,0.12),0_6px_16px_-4px_rgba(5,150,105,0.55)] transition-all hover:scale-105 hover:bg-emerald-600 active:scale-95 dark:shadow-[0_2px_8px_rgba(0,0,0,0.35),0_6px_20px_-4px_rgba(52,211,153,0.45)]"
+                        disabled={accionCurp === String(solicitudRapida.folio).toUpperCase()}
+                        onClick={() => {
+                          setSelected(solicitudRapida)
+                          setConfirmAprobar(true)
+                        }}
+                        title="Aprobar solicitud"
+                      >
+                        {accionCurp === String(solicitudRapida.folio).toUpperCase() ? (
+                          <Loader2 className="size-6 animate-spin" />
+                        ) : (
+                          <Check className="size-6 shrink-0" strokeWidth={2.5} aria-hidden />
+                        )}
+                      </Button>
+                    </div>
                   </div>
+                </div>
+
+                {/* Navegación entre solicitudes: inferior derecha */}
+                <div className="mt-auto flex shrink-0 items-center justify-end gap-1 pt-2">
+                  <span className="mr-1 text-[11px] font-medium tabular-nums text-muted-foreground">
+                    {quickReviewIndex + 1}/{pendientes.length}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-8 rounded-lg border-border/80"
+                    onClick={goPrevQuick}
+                    disabled={pendientes.length <= 1}
+                    aria-label="Solicitud anterior"
+                    title="Anterior"
+                  >
+                    <ChevronLeft className="size-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-8 rounded-lg border-border/80"
+                    onClick={goNextQuick}
+                    disabled={pendientes.length <= 1}
+                    aria-label="Siguiente solicitud"
+                    title="Siguiente"
+                  >
+                    <ChevronRight className="size-4" />
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -293,9 +430,7 @@ export function PreregistroSection() {
               </div>
               <p className="text-lg font-semibold text-foreground">Todo al día</p>
               <p className="text-sm text-muted-foreground mt-1.5 max-w-[250px]">
-                {searchTerm 
-                  ? "Limpia la búsqueda en la tabla para volver a usar la revisión rápida." 
-                  : "No tienes solicitudes pendientes en la cola de revisión."}
+                No tienes solicitudes pendientes en la cola de revisión.
               </p>
             </Card>
           )}
@@ -303,20 +438,21 @@ export function PreregistroSection() {
       </div>
 
       {/* Tabla Principal */}
-      <Card className="border-border/60 shadow-sm">
+      <Card className="border-border/60 text-foreground shadow-sm">
         <CardHeader className="pb-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle className="text-xl font-bold">Todas las solicitudes</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-xl font-bold text-foreground">Todas las solicitudes</CardTitle>
+              <CardDescription className="text-foreground">
                 {loading ? "Cargando datos..." : `Mostrando ${filtered.length} expediente(s)`}
               </CardDescription>
             </div>
             <div className="relative w-full sm:w-80">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground" />
               <Input
+                id="preregistro-busqueda-solicitudes"
                 placeholder="Buscar por nombre, CURP, correo..."
-                className="h-10 pl-9 pr-9 text-sm transition-colors focus-visible:ring-1"
+                className="h-10 pl-9 pr-9 text-sm text-foreground placeholder:text-neutral-700 dark:placeholder:text-neutral-300 transition-colors focus-visible:ring-1"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 disabled={loading}
@@ -325,7 +461,7 @@ export function PreregistroSection() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute right-1 top-1/2 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-1 top-1/2 size-8 -translate-y-1/2 text-foreground hover:bg-muted/60"
                   onClick={() => setSearchTerm("")}
                 >
                   <X className="size-4" />
@@ -336,8 +472,8 @@ export function PreregistroSection() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <Loader2 className="size-10 animate-spin text-primary/60 mb-4" />
+            <div className="flex flex-col items-center justify-center py-16 text-foreground">
+              <Loader2 className="size-10 animate-spin text-foreground/80 mb-4" />
               <p className="text-sm font-medium">Cargando solicitudes...</p>
             </div>
           ) : (
@@ -345,66 +481,71 @@ export function PreregistroSection() {
               <Table>
                 <TableHeader className="bg-muted/50">
                   <TableRow>
-                    <TableHead className="text-sm font-semibold h-12">Nombre</TableHead>
-                    <TableHead className="text-sm font-semibold hidden md:table-cell">CURP</TableHead>
-                    <TableHead className="text-sm font-semibold hidden lg:table-cell">Correo</TableHead>
-                    <TableHead className="text-sm font-semibold hidden lg:table-cell">Teléfono</TableHead>
-                    <TableHead className="text-sm font-semibold text-center">Acciones</TableHead>
+                    <TableHead className="h-12 text-sm font-semibold text-foreground">Nombre</TableHead>
+                    <TableHead className="hidden h-12 text-sm font-semibold text-foreground md:table-cell">
+                      CURP
+                    </TableHead>
+                    <TableHead className="hidden h-12 text-sm font-semibold text-foreground lg:table-cell">
+                      Correo
+                    </TableHead>
+                    <TableHead className="hidden h-12 text-sm font-semibold text-foreground lg:table-cell">
+                      Teléfono
+                    </TableHead>
+                    <TableHead className="h-12 text-center text-sm font-semibold text-foreground">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filtered.map((b) => {
                     const curp = String(b.folio ?? b.curp ?? "").trim()
-                    const busy = accionCurp === curp.toUpperCase()
                     return (
                       <TableRow key={curp} className="hover:bg-muted/30 transition-colors">
-                        <TableCell className="font-medium">{nombreCompleto(b)}</TableCell>
-                        <TableCell className="hidden md:table-cell font-mono text-sm text-muted-foreground">
-                          {curp}
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell text-muted-foreground text-sm">
+                        <TableCell className="font-medium text-foreground">{nombreCompleto(b)}</TableCell>
+                        <TableCell className="hidden font-mono text-sm text-foreground md:table-cell">{curp}</TableCell>
+                        <TableCell className="hidden text-sm text-foreground lg:table-cell">
                           {b.correoElectronico ?? "—"}
                         </TableCell>
-                        <TableCell className="hidden lg:table-cell text-muted-foreground text-sm">
+                        <TableCell className="hidden text-sm text-foreground lg:table-cell">
                           {b.telefonoCelular ?? "—"}
                         </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex flex-wrap items-center justify-center gap-2">
+                        <TableCell className="text-center align-middle">
+                          <div className="flex items-center justify-center gap-0.5">
                             <Button
                               variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
+                              size="icon"
+                              className="size-8 text-foreground hover:bg-muted/60 hover:text-foreground"
                               title="Ver detalle"
                               onClick={() => {
                                 setSelected(b)
                                 setShowDetalleDialog(true)
                               }}
                             >
-                              <Eye className="size-4" />
+                              <Eye className="size-4 text-foreground" />
                               <span className="sr-only">Ver detalle</span>
                             </Button>
                             <Button
-                              size="sm"
-                              className="h-8 px-3 text-xs font-semibold"
-                              disabled={busy}
+                              variant="ghost"
+                              size="icon"
+                              className="size-8 text-foreground hover:bg-muted/60 hover:text-foreground"
+                              title="Seleccionar en revisión rápida para aceptar o rechazar"
                               onClick={() => {
-                                setSelected(b)
-                                setConfirmAprobar(true)
+                                const id = curp.toUpperCase()
+                                const idx = pendientes.findIndex(
+                                  (p) =>
+                                    String(p.folio ?? p.curp ?? "")
+                                      .trim()
+                                      .toUpperCase() === id
+                                )
+                                if (idx < 0) return
+                                setQuickReviewIndex(idx)
+                                requestAnimationFrame(() => {
+                                  document
+                                    .getElementById("revision-rapida-preregistro")
+                                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                                })
                               }}
                             >
-                              {busy ? <Loader2 className="size-3 animate-spin" /> : "Aprobar"}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              className="h-8 px-3 text-xs font-semibold"
-                              disabled={busy}
-                              onClick={() => {
-                                setSelected(b)
-                                setConfirmRechazar(true)
-                              }}
-                            >
-                              Cancelar
+                              <ArrowUp className="size-4 text-foreground" />
+                              <span className="sr-only">Seleccionar en revisión rápida</span>
                             </Button>
                           </div>
                         </TableCell>
@@ -422,7 +563,7 @@ export function PreregistroSection() {
                 <Inbox className="size-8 text-muted-foreground/60" />
               </div>
               <p className="text-lg font-semibold text-foreground">No se encontraron solicitudes</p>
-              <p className="text-sm text-muted-foreground max-w-sm mt-1">
+              <p className="text-sm text-foreground max-w-sm mt-1">
                 {searchTerm 
                   ? "No hay expedientes que coincidan con tu búsqueda. Intenta con otros términos." 
                   : "Actualmente no hay solicitudes pendientes de revisión."}
@@ -491,27 +632,14 @@ export function PreregistroSection() {
                 <p className="text-base whitespace-pre-wrap text-foreground/90 leading-relaxed">
                   {notasSinMarcador(selected.notas) || "Sin observaciones adicionales."}
                 </p>
+                <div className="mt-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Tipo de espina bífida</p>
+                  <p className="text-base font-medium text-foreground">{labelTipoEspinaBifida(selected.tipo)}</p>
+                </div>
               </div>
-              <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:justify-end border-t border-border mt-2">
-                <Button variant="ghost" onClick={() => setShowDetalleDialog(false)}>
+              <div className="flex justify-end border-t border-border pt-4 mt-2">
+                <Button variant="outline" onClick={() => setShowDetalleDialog(false)}>
                   Cerrar
-                </Button>
-                <Button
-                  variant="destructive"
-                  disabled={accionCurp === String(selected.folio).toUpperCase()}
-                  onClick={() => setConfirmRechazar(true)}
-                >
-                  Cancelar solicitud
-                </Button>
-                <Button
-                  className="bg-[#0f4c81] hover:bg-[#0a365c] text-white"
-                  disabled={accionCurp === String(selected.folio).toUpperCase()}
-                  onClick={() => setConfirmAprobar(true)}
-                >
-                  {accionCurp === String(selected.folio).toUpperCase() ? (
-                    <Loader2 className="size-4 animate-spin mr-2" />
-                  ) : null}
-                  Aprobar expediente
                 </Button>
               </div>
             </div>
@@ -531,7 +659,7 @@ export function PreregistroSection() {
           <AlertDialogFooter>
             <AlertDialogCancel>Volver</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-white hover:bg-destructive/90 hover:text-white"
               onClick={() => void onRechazarConfirmado()}
             >
               Sí, eliminar expediente
@@ -561,20 +689,6 @@ export function PreregistroSection() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Modal Formulario Público */}
-      <Dialog open={showFormularioPublico} onOpenChange={setShowFormularioPublico}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto sm:rounded-2xl p-0">
-          <DialogHeader className="p-6 pb-2 sticky top-0 bg-background/95 backdrop-blur-sm z-10 border-b">
-            <DialogTitle className="text-2xl font-bold">Vista previa: Formulario público</DialogTitle>
-            <DialogDescription>
-              Así es exactamente como las familias visualizan el formulario en la web.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="p-6 pt-4">
-            <PublicPreregistroSection embedded hideIntro scrollTargetOnSuccess="panel-administrativo" />
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

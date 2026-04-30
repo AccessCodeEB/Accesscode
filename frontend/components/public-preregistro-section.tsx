@@ -31,6 +31,7 @@ import { createBeneficiarioPublicSolicitud, uploadBeneficiarioFotoPerfil } from 
 import {
   ALTA_FORM_INICIAL,
   TIPOS_SANGRE_OPCIONES,
+  TIPOS_ESPINA_BIFIDA_OPCIONES,
   buildAltaCreatePayload,
   parseBeneficiarioApiError,
   validateAlta,
@@ -459,7 +460,7 @@ export function PublicPreregistroSection({
         <StepCard
           step={3}
           title="Contacto"
-          description="Teléfonos y correo para comunicarnos contigo."
+          description="Correo y teléfono fijo. El número celular lo pedimos en el paso de información clínica, junto con las notas."
           icon={Phone}
         >
           <div className="grid gap-5 sm:grid-cols-2">
@@ -472,19 +473,6 @@ export function PublicPreregistroSection({
                   onChange={(e) => change("telefonoCasa", e.target.value)}
                   className={cn("h-11 rounded-xl bg-background pl-10", errors.telefonoCasa && "border-destructive")}
                   placeholder="10 dígitos (opcional)"
-                  inputMode="tel"
-                />
-              </div>
-            </FieldShell>
-            <FieldShell label="Teléfono celular" required error={errors.telefonoCelular} htmlFor="prereg-tcel">
-              <div className="relative">
-                <Phone className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="prereg-tcel"
-                  value={form.telefonoCelular}
-                  onChange={(e) => change("telefonoCelular", e.target.value)}
-                  className={cn("h-11 rounded-xl bg-background pl-10", errors.telefonoCelular && "border-destructive")}
-                  placeholder="10 dígitos"
                   inputMode="tel"
                 />
               </div>
@@ -544,23 +532,10 @@ export function PublicPreregistroSection({
         <StepCard
           step={5}
           title="Información clínica"
-          description="Nos ayuda a orientar mejor el seguimiento."
+          description="Notas, tipo de espina bífida y un celular de contacto nos ayudan a orientar el seguimiento."
           icon={Stethoscope}
         >
           <div className="grid gap-5 sm:grid-cols-2">
-            <FieldShell label="Tipo de espina bífida" htmlFor="prereg-tipo">
-              <Select value={form.tipo} onValueChange={(v) => change("tipo", v)}>
-                <SelectTrigger id="prereg-tipo" className="h-11 rounded-xl bg-background">
-                  <SelectValue placeholder="Selecciona (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Mielomeningocele">Mielomeningocele</SelectItem>
-                  <SelectItem value="Meningocele">Meningocele</SelectItem>
-                  <SelectItem value="Oculta">Oculta</SelectItem>
-                  <SelectItem value="Lipomeningocele">Lipomeningocele</SelectItem>
-                </SelectContent>
-              </Select>
-            </FieldShell>
             <FieldShell label="¿Usa válvula?" required error={errors.usaValvula} htmlFor="prereg-valv">
               <Select
                 value={form.usaValvula === undefined ? "" : form.usaValvula ? "si" : "no"}
@@ -584,7 +559,7 @@ export function PublicPreregistroSection({
                 placeholder="Opcional"
               />
             </FieldShell>
-            <FieldShell label="Hospital de nacimiento" htmlFor="prereg-hn">
+            <FieldShell label="Hospital de nacimiento" htmlFor="prereg-hn" className="sm:col-span-2">
               <Input
                 id="prereg-hn"
                 value={form.hospitalNacimiento}
@@ -593,7 +568,7 @@ export function PublicPreregistroSection({
                 placeholder="Opcional"
               />
             </FieldShell>
-            <FieldShell label="Notas u observaciones" error={errors.notas} htmlFor="prereg-notas" className="sm:col-span-2">
+            <FieldShell label="Motivo / notas breves" error={errors.notas} htmlFor="prereg-notas" className="sm:col-span-2">
               <Textarea
                 id="prereg-notas"
                 value={form.notas}
@@ -602,6 +577,38 @@ export function PublicPreregistroSection({
                 className={cn("rounded-xl bg-background resize-y min-h-[100px]", errors.notas && "border-destructive")}
                 placeholder="Información adicional que consideres importante (opcional, máx. 500 caracteres)"
               />
+            </FieldShell>
+            <FieldShell label="Tipo de espina bífida" required error={errors.tipo} htmlFor="prereg-tipo" className="sm:col-span-2">
+              <Select
+                value={form.tipo ? form.tipo : "__none__"}
+                onValueChange={(v) => change("tipo", v === "__none__" ? "" : v)}
+              >
+                <SelectTrigger id="prereg-tipo" className={cn("h-11 rounded-xl bg-background", errors.tipo && "border-destructive")}>
+                  <SelectValue placeholder="Selecciona un tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Selecciona un tipo</SelectItem>
+                  {TIPOS_ESPINA_BIFIDA_OPCIONES.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldShell>
+            <FieldShell label="Número de teléfono celular" required error={errors.telefonoCelular} htmlFor="prereg-tcel" className="sm:col-span-2">
+              <div className="relative">
+                <Phone className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="prereg-tcel"
+                  value={form.telefonoCelular}
+                  onChange={(e) => change("telefonoCelular", e.target.value)}
+                  className={cn("h-11 rounded-xl bg-background pl-10", errors.telefonoCelular && "border-destructive")}
+                  placeholder="10 dígitos"
+                  inputMode="tel"
+                  autoComplete="tel"
+                />
+              </div>
             </FieldShell>
           </div>
         </StepCard>

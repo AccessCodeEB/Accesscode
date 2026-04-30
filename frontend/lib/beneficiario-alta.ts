@@ -3,6 +3,26 @@ import type { Beneficiario } from "@/services/beneficiarios"
 /** Valores permitidos por CHECK en BD (columna TIPOS_SANGRE) y en la API como `tipoSangre`. */
 export const TIPOS_SANGRE_OPCIONES: string[] = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
 
+/** Valores del selector público / clínico (columna `tipo` en beneficiario). */
+export const TIPOS_ESPINA_BIFIDA_OPCIONES = [
+  "Mielomeningocele",
+  "Meningocele",
+  "Oculta",
+  "Lipomeningocele",
+] as const
+
+export type TipoEspinaBifida = (typeof TIPOS_ESPINA_BIFIDA_OPCIONES)[number]
+
+export function labelTipoEspinaBifida(value: string | undefined): string {
+  const v = String(value ?? "").trim()
+  if (!v) return "—"
+  const canon = TIPOS_ESPINA_BIFIDA_OPCIONES.find(
+    (t) => t.toLowerCase() === v.toLowerCase()
+  )
+  if (canon) return canon
+  return v
+}
+
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const TEL_RE = /^\d{10}$/
 const CP_RE = /^\d{5}$/
@@ -125,6 +145,16 @@ export function validateAlta(form: BeneficiarioAltaForm): Record<string, string>
 
   if (form.usaValvula === undefined) errs.usaValvula = "Obligatorio"
 
+  const tipoEbRaw = String(form.tipo ?? "").trim()
+  const tipoEbCanon = TIPOS_ESPINA_BIFIDA_OPCIONES.find(
+    (t) => t.toLowerCase() === tipoEbRaw.toLowerCase()
+  )
+  if (!tipoEbRaw) {
+    errs.tipo = "Selecciona un tipo de espina bífida"
+  } else if (!tipoEbCanon) {
+    errs.tipo = "Tipo no válido"
+  }
+
   const tsAlta = String(form.tipoSangre ?? "").trim()
   if (tsAlta && !TIPOS_SANGRE_OPCIONES.includes(tsAlta)) errs.tipoSangre = "Tipo inválido"
 
@@ -143,6 +173,10 @@ export function buildAltaCreatePayload(form: BeneficiarioAltaForm): Omit<Benefic
     const s = String(t).trim()
     return s === "" ? null : s
   })()
+  const tipoCanon =
+    TIPOS_ESPINA_BIFIDA_OPCIONES.find(
+      (t) => t.toLowerCase() === String(form.tipo ?? "").trim().toLowerCase()
+    ) ?? String(form.tipo ?? "").trim()
   return {
     ...form,
     curp: form.curp.toUpperCase(),
@@ -153,7 +187,7 @@ export function buildAltaCreatePayload(form: BeneficiarioAltaForm): Omit<Benefic
     correoElectronico: String(form.correoElectronico ?? "").trim(),
     tipoSangre: tipoSangreAlta ?? undefined,
     usaValvula: (form.usaValvula ? "S" : "N") as unknown as boolean,
-    tipo: form.tipo || "",
+    tipo: tipoCanon,
     ciudad: form.ciudad,
     estado: form.estado,
     membresiaEstatus: "Sin membresia",

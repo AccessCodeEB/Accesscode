@@ -74,6 +74,10 @@ function sanitizar(data) {
     const t = String(data.tipoSangre ?? "").trim();
     data.tipoSangre = t === "" ? null : t;
   }
+  if (Object.prototype.hasOwnProperty.call(data, "tipo")) {
+    const t = String(data.tipo ?? "").trim();
+    data.tipo = t === "" ? null : t;
+  }
   return data;
 }
 

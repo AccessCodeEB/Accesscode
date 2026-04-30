@@ -415,7 +415,7 @@ export function InventarioSection() {
             <div className="relative w-full sm:w-80">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar por clave o descripción..."
+                placeholder="Buscar por clave o artículo..."
                 className="pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -430,8 +430,14 @@ export function InventarioSection() {
                 <TableHead className="font-semibold text-center">
                   <button type="button" className="cursor-pointer" onClick={() => handleSort("clave")}>Clave{sortIndicator("clave")}</button>
                 </TableHead>
-                <TableHead className="font-semibold text-center">
-                  <button type="button" className="cursor-pointer" onClick={() => handleSort("descripcion")}>Descripción{sortIndicator("descripcion")}</button>
+                <TableHead className="min-w-[12rem] font-semibold text-left">
+                  <button
+                    type="button"
+                    className="inline-flex cursor-pointer items-baseline gap-0.5 text-left"
+                    onClick={() => handleSort("descripcion")}
+                  >
+                    Artículo{sortIndicator("descripcion")}
+                  </button>
                 </TableHead>
                 <TableHead className="font-semibold hidden md:table-cell text-center">
                   <button type="button" className="cursor-pointer" onClick={handleUnidadCycle}>
@@ -451,7 +457,7 @@ export function InventarioSection() {
               {sortedFiltered.map((item, idx) => (
                 <TableRow key={`${item.clave}-${idx}`} className={item.cantidad < item.minimo ? "bg-destructive/5" : ""}>
                   <TableCell className="text-center font-semibold text-primary">{item.clave}</TableCell>
-                  <TableCell className="text-center font-medium">{item.descripcion}</TableCell>
+                  <TableCell className="text-left font-medium">{item.descripcion}</TableCell>
                   <TableCell className="hidden md:table-cell text-center text-foreground">{item.unidad}</TableCell>
                   <TableCell className="hidden lg:table-cell text-center text-foreground">{item.cuota}</TableCell>
                   <TableCell className="text-center">
