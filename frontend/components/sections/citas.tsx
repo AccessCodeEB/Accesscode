@@ -1,77 +1,44 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { Plus, CalendarDays, Check, Clock, X, ChevronLeft, ChevronRight, AlertCircle, ChevronDown } from "lucide-react"
-import { toast } from "sonner"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Plus, CalendarDays, List, AlertCircle, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getCitas, createCita, updateEstatusCita, type Cita } from "@/services/citas"
+import { getCitas, createCita, type Cita } from "@/services/citas"
 import { getBeneficiarios, type Beneficiario } from "@/services/beneficiarios"
 import { TIPOS_SERVICIO_SUGERIDOS } from "@/services/servicios"
+import { CitasCalendarView } from "@/components/sections/citas-calendar-view"
+import { CitasListView } from "@/components/sections/citas-list-view"
 
-const DIAS_SEMANA = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"]
-const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 const ESPECIALISTAS = [
   "Dr. Roberto Méndez - Neurología",
   "Dra. Patricia Solís - Rehabilitación",
   "Lic. Carmen Ruiz - Psicología",
   "Dr. Miguel Torres - Urología",
 ]
-
-function getDaysInMonth(year: number, month: number) {
-  return new Date(year, month + 1, 0).getDate()
-}
-function getFirstDayOfWeek(year: number, month: number) {
-  const day = new Date(year, month, 1).getDay()
-  return day === 0 ? 6 : day - 1 // Mon=0
-}
-
-function getCitasForDay(citasList: Cita[], year: number, month: number, day: number) {
-  return citasList.filter((c) => {
-    if (!c.fecha) return false
-    const d = new Date(c.fecha + "T12:00:00")
-    return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day
-  })
-}
-
-function CitaStatusBadge({ status }: { status: string }) {
-  const config: Record<string, { color: string; Icon: typeof Check }> = {
-    Confirmada: { color: "bg-emerald-500", Icon: Check },
-    Pendiente: { color: "bg-amber-500", Icon: Clock },
-    Completada: { color: "bg-[#005bb5]", Icon: Check },
-    Cancelada: { color: "bg-red-600", Icon: X },
-  }
-  const c = config[status]
-  if (!c) return null
-  return (
-    <div className={`flex size-6 items-center justify-center rounded-full ${c.color} text-white shadow-sm shrink-0`}>
-      <c.Icon className="size-3.5 stroke-3" />
-    </div>
-  )
-}
-
 const EMPTY_FORM = { curp: "", idTipoServicio: "", especialista: "", fecha: "", hora: "", notas: "" }
 
+type ActiveView = "calendar" | "list"
+
 export function CitasSection() {
-  const today = new Date()
   const [citas, setCitas] = useState<Cita[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [calYear, setCalYear] = useState(today.getFullYear())
-  const [calMonth, setCalMonth] = useState(today.getMonth())
-  const [selectedDay, setSelectedDay] = useState<number | null>(today.getDate())
+  const [activeView, setActiveView] = useState<ActiveView>("calendar")
+  const [viewVisible, setViewVisible] = useState(true)
+
+  // Dialog nueva cita
   const [showDialog, setShowDialog] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+
+  // Beneficiarios
   const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([])
   const [buscaBenef, setBuscaBenef] = useState("")
-  const [updatingId, setUpdatingId] = useState<number | null>(null)
-  const [confirmStatus, setConfirmStatus] = useState<{ id: number, estatus: Cita["estatus"], name: string } | null>(null)
   const [showBenefList, setShowBenefList] = useState(false)
 
   const loadCitas = useCallback(() => {
@@ -84,28 +51,15 @@ export function CitasSection() {
 
   useEffect(() => {
     loadCitas()
-    getBeneficiarios().then(setBeneficiarios).catch(() => { })
+    getBeneficiarios().then(setBeneficiarios).catch(() => {})
   }, [loadCitas])
 
-  const daysInMonth = getDaysInMonth(calYear, calMonth)
-  const firstDayOfWeek = getFirstDayOfWeek(calYear, calMonth)
-
-  const citasDelDia = useMemo(
-    () => selectedDay ? getCitasForDay(citas, calYear, calMonth, selectedDay) : [],
-    [citas, calYear, calMonth, selectedDay]
-  )
-
-  const proximas = useMemo(() => {
-    const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
-    return [...citas]
-      .filter(c => c.estatus !== "Cancelada" && c.fecha && new Date(c.fecha + "T00:00:00") >= hoy)
-      .sort((a, b) => {
-        const ta = new Date(a.fecha + "T" + (a.hora || "00:00")).getTime()
-        const tb = new Date(b.fecha + "T" + (b.hora || "00:00")).getTime()
-        return ta - tb
-      })
-      .slice(0, 15)
-  }, [citas])
+  // Smooth view transition
+  function switchView(view: ActiveView) {
+    if (view === activeView) return
+    setViewVisible(false)
+    setTimeout(() => { setActiveView(view); setViewVisible(true) }, 180)
+  }
 
   const benefFiltrados = useMemo(() => {
     const sorted = [...beneficiarios].sort((a, b) => a.nombres.localeCompare(b.nombres))
@@ -116,17 +70,6 @@ export function CitasSection() {
       `${b.nombres} ${b.apellidoPaterno}`.toLowerCase().includes(q)
     )
   }, [beneficiarios, buscaBenef])
-
-  function prevMonth() {
-    if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11) }
-    else setCalMonth(m => m - 1)
-    setSelectedDay(null)
-  }
-  function nextMonth() {
-    if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0) }
-    else setCalMonth(m => m + 1)
-    setSelectedDay(null)
-  }
 
   function openDialog() {
     setForm(EMPTY_FORM)
@@ -142,10 +85,7 @@ export function CitasSection() {
     if (!form.idTipoServicio) missing.push("tipo de servicio")
     if (!form.fecha) missing.push("fecha")
     if (!form.hora) missing.push("hora")
-    if (missing.length > 0) {
-      setSaveError(`Selecciona: ${missing.join(", ")}.`)
-      return
-    }
+    if (missing.length > 0) { setSaveError(`Selecciona: ${missing.join(", ")}.`); return }
     setSaving(true); setSaveError(null)
     try {
       await createCita({
@@ -165,187 +105,70 @@ export function CitasSection() {
     }
   }
 
-  async function handleUpdateEstatus(id: number, estatus: Cita["estatus"]) {
-    setUpdatingId(id)
-    try {
-      await updateEstatusCita(id, estatus)
-      toast.success(`Cita marcada como ${estatus}`)
-      loadCitas()
-      setConfirmStatus(null)
-    } catch {
-      toast.error("No se pudo actualizar el estatus de la cita.")
-    } finally {
-      setUpdatingId(null)
-    }
-  }
-
-  if (loading) return <div className="flex h-64 items-center justify-center"><p className="text-muted-foreground text-sm">Cargando citas...</p></div>
-  if (error) return <div className="flex h-64 items-center justify-center"><p className="text-destructive text-sm">{error}</p></div>
-
-  const isToday = (day: number) =>
-    day === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear()
-
   return (
-    <div className="flex flex-col gap-8 pb-8">
-      {/* Header */}
+    <div className="flex flex-col gap-6 pb-8">
+      {/* ── Header ── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Citas</h1>
           <p className="mt-1 text-sm text-muted-foreground">Gestión de citas con especialistas.</p>
         </div>
-        <Button className="gap-2 shadow-sm" onClick={openDialog}>
-          <Plus className="size-4" />Nueva Cita
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* Toggle pill */}
+          <div className="flex items-center rounded-xl border border-border/50 bg-muted/30 p-1 gap-1">
+            <button
+              onClick={() => switchView("calendar")}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
+                activeView === "calendar"
+                  ? "bg-background text-foreground shadow-sm border border-border/40"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <CalendarDays className="size-3.5" />
+              Agenda
+            </button>
+            <button
+              onClick={() => switchView("list")}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
+                activeView === "list"
+                  ? "bg-background text-foreground shadow-sm border border-border/40"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <List className="size-3.5" />
+              Historial
+            </button>
+          </div>
+
+          <Button className="gap-2 shadow-sm" onClick={openDialog}>
+            <Plus className="size-4" />Nueva Cita
+          </Button>
+        </div>
       </div>
 
-      {/* Calendar + Day panel */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-7">
-        <Card className="border-border/60 shadow-sm lg:col-span-4 rounded-2xl overflow-hidden">
-          <CardHeader className="pb-2 pt-6 px-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CalendarDays className="size-5 text-primary" />
-                <CardTitle className="text-lg font-bold">{MESES[calMonth]} {calYear}</CardTitle>
-              </div>
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="size-8" onClick={prevMonth}><ChevronLeft className="size-4" /></Button>
-                <Button variant="ghost" size="icon" className="size-8" onClick={nextMonth}><ChevronRight className="size-4" /></Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="px-6 pb-6">
-            <div className="grid grid-cols-7 gap-y-2 gap-x-1 mt-4">
-              {DIAS_SEMANA.map(dia => (
-                <div key={dia} className="pb-2 text-center text-xs font-semibold text-muted-foreground">{dia}</div>
-              ))}
-              {Array.from({ length: firstDayOfWeek }).map((_, i) => <div key={`e-${i}`} />)}
-              {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(dia => {
-                const citasDia = getCitasForDay(citas, calYear, calMonth, dia)
-                const isSelected = selectedDay === dia
-                return (
-                  <button
-                    key={dia}
-                    onClick={() => setSelectedDay(dia)}
-                    className={`relative mx-auto flex h-10 w-10 flex-col items-center justify-center rounded-xl text-sm transition-all
-                      ${isSelected ? "bg-primary text-primary-foreground font-bold shadow-md hover:bg-primary/90" : "text-foreground font-medium hover:bg-muted"}
-                      ${isToday(dia) && !isSelected ? "ring-2 ring-primary/20 bg-primary/5" : ""}`}
-                  >
-                    <span>{dia}</span>
-                    {citasDia.length > 0 && (
-                      <div className="absolute bottom-1.5 flex gap-0.5">
-                        {citasDia.slice(0, 3).map((_, i) => (
-                          <div key={i} className={`size-1 rounded-full ${isSelected ? "bg-white" : "bg-primary"}`} />
-                        ))}
-                      </div>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/60 shadow-sm lg:col-span-3 rounded-2xl bg-muted/10 flex flex-col">
-          <CardHeader className="pb-4 pt-6 px-6 border-b border-border/40 shrink-0">
-            <CardTitle className="text-lg font-bold">
-              {selectedDay ? `${selectedDay} de ${MESES[calMonth]}` : "Seleccione un día"}
-            </CardTitle>
-            <CardDescription>
-              {citasDelDia.length} cita{citasDelDia.length !== 1 ? "s" : ""} programada{citasDelDia.length !== 1 ? "s" : ""}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0 flex-1 relative min-h-[250px]">
-            <div className="absolute inset-0 p-6 overflow-y-auto">
-              {citasDelDia.length === 0 ? (
-                <div className="flex h-full items-center justify-center">
-                  <p className="text-sm text-muted-foreground">No hay citas para este día.</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {citasDelDia.map(cita => (
-                  <div key={cita.id} className="rounded-xl border border-border/60 bg-background p-4 shadow-sm transition-shadow hover:shadow-md">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex flex-col gap-0.5">
-                        <p className="text-sm font-bold text-foreground">{cita.hora}</p>
-                        <p className="text-sm font-semibold text-foreground line-clamp-1">{cita.beneficiario}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-1">{cita.especialista}</p>
-                      </div>
-                      <CitaStatusBadge status={cita.estatus} />
-                    </div>
-                    {cita.estatus === "Pendiente" && (
-                      <div className="mt-3 flex gap-2">
-                        <Button size="sm" variant="outline" className="h-7 text-xs border-emerald-400 text-emerald-600 hover:bg-emerald-50"
-                          disabled={updatingId === cita.id}
-                          onClick={() => setConfirmStatus({ id: cita.id, estatus: "Confirmada", name: cita.beneficiario })}>
-                          Confirmar
-                        </Button>
-                        <Button size="sm" variant="outline" className="h-7 text-xs border-red-400 text-red-600 hover:bg-red-50"
-                          disabled={updatingId === cita.id}
-                          onClick={() => setConfirmStatus({ id: cita.id, estatus: "Cancelada", name: cita.beneficiario })}>
-                          Cancelar
-                        </Button>
-                      </div>
-                    )}
-                    {cita.estatus === "Confirmada" && (
-                      <div className="mt-3 flex gap-2">
-                        <Button size="sm" variant="outline" className="h-7 text-xs border-blue-400 text-blue-600 hover:bg-blue-50"
-                          disabled={updatingId === cita.id}
-                          onClick={() => setConfirmStatus({ id: cita.id, estatus: "Completada", name: cita.beneficiario })}>
-                          Marcar Completada
-                        </Button>
-                        <Button size="sm" variant="outline" className="h-7 text-xs border-red-400 text-red-600 hover:bg-red-50"
-                          disabled={updatingId === cita.id}
-                          onClick={() => setConfirmStatus({ id: cita.id, estatus: "Cancelada", name: cita.beneficiario })}>
-                          Cancelar
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Próximas Citas */}
-      <Card className="border-border/60 shadow-sm rounded-2xl">
-        <CardHeader className="px-6 py-5 border-b border-border/40">
-          <CardTitle className="text-lg font-bold">Próximas Citas</CardTitle>
-          <CardDescription>Citas programadas y confirmadas próximas.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-6">
-          {proximas.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No hay citas próximas programadas.</p>
+      {/* ── Main view (con fade) ── */}
+      {loading ? (
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-muted-foreground text-sm">Cargando citas...</p>
+        </div>
+      ) : error ? (
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-destructive text-sm">{error}</p>
+        </div>
+      ) : (
+        <div
+          style={{ transition: "opacity 180ms ease, transform 180ms ease" }}
+          className={viewVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"}
+        >
+          {activeView === "calendar" ? (
+            <CitasCalendarView citas={citas} onReload={loadCitas} />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {proximas.map(cita => (
-                <div key={cita.id} className="flex flex-col gap-3 rounded-xl border border-border/60 bg-background p-4 transition-all hover:shadow-md hover:border-primary/40 relative overflow-hidden group">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary transition-colors" />
-                  <div className="flex flex-col gap-1.5 pl-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-semibold text-primary">{cita.folio}</span>
-                      <span className="text-sm font-bold text-foreground">{cita.beneficiario}</span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground font-medium">
-                      <span className="flex items-center gap-1.5"><CalendarDays className="size-3.5 opacity-70" />{cita.fecha}</span>
-                      <span className="flex items-center gap-1.5"><Clock className="size-3.5 opacity-70" />{cita.hora}</span>
-                      <span>{cita.especialista}</span>
-                    </div>
-                  </div>
-                  <div className="mt-2 pt-3 border-t border-border/40 flex justify-between items-center pl-2">
-                    <span className="text-xs font-medium text-muted-foreground">Estatus:</span>
-                    <CitaStatusBadge status={cita.estatus} />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <CitasListView citas={citas} beneficiarios={beneficiarios} />
           )}
-        </CardContent>
-      </Card>
+        </div>
+      )}
 
-      {/* Dialog Nueva Cita */}
+      {/* ── Dialog Nueva Cita ── */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden rounded-2xl">
           <div className="px-6 py-4 border-b border-border/40 bg-muted/10">
@@ -367,18 +190,16 @@ export function CitasSection() {
                   onFocus={() => setShowBenefList(true)}
                   onChange={e => { setBuscaBenef(e.target.value); setForm(f => ({ ...f, curp: "" })); setShowBenefList(true) }}
                 />
-                <Button 
+                <button
                   type="button"
-                  variant="ghost" 
-                  size="icon" 
-                  className="absolute right-0 top-0 h-full w-8 text-muted-foreground hover:bg-transparent"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => setShowBenefList(!showBenefList)}
                 >
                   <ChevronDown className="size-4" />
-                </Button>
+                </button>
               </div>
               {showBenefList && benefFiltrados.length > 0 && !form.curp && (
-                <div className="absolute z-10 mt-1 w-full max-h-60 rounded-xl border border-border/60 bg-background shadow-lg overflow-y-auto">
+                <div className="absolute z-20 mt-1 w-full max-h-56 rounded-xl border border-border/60 bg-background shadow-lg overflow-y-auto">
                   {benefFiltrados.map(b => (
                     <button
                       key={b.folio}
@@ -406,9 +227,7 @@ export function CitasSection() {
             <div className="space-y-1.5">
               <Label className="text-sm font-semibold">Tipo de Servicio</Label>
               <Select value={form.idTipoServicio} onValueChange={v => setForm(f => ({ ...f, idTipoServicio: v }))}>
-                <SelectTrigger className="bg-muted/30">
-                  <SelectValue placeholder="Seleccionar tipo de servicio" />
-                </SelectTrigger>
+                <SelectTrigger className="bg-muted/30"><SelectValue placeholder="Seleccionar tipo de servicio" /></SelectTrigger>
                 <SelectContent>
                   {TIPOS_SERVICIO_SUGERIDOS.map(t => (
                     <SelectItem key={t.idTipoServicio} value={String(t.idTipoServicio)}>{t.nombre}</SelectItem>
@@ -421,13 +240,9 @@ export function CitasSection() {
             <div className="space-y-1.5">
               <Label className="text-sm font-semibold">Especialista</Label>
               <Select value={form.especialista} onValueChange={v => setForm(f => ({ ...f, especialista: v }))}>
-                <SelectTrigger className="bg-muted/30">
-                  <SelectValue placeholder="Seleccionar especialista (opcional)" />
-                </SelectTrigger>
+                <SelectTrigger className="bg-muted/30"><SelectValue placeholder="Seleccionar especialista (opcional)" /></SelectTrigger>
                 <SelectContent>
-                  {ESPECIALISTAS.map(e => (
-                    <SelectItem key={e} value={e}>{e}</SelectItem>
-                  ))}
+                  {ESPECIALISTAS.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -455,8 +270,7 @@ export function CitasSection() {
 
             {saveError && (
               <div className="flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                <AlertCircle className="size-4 shrink-0" />
-                {saveError}
+                <AlertCircle className="size-4 shrink-0" />{saveError}
               </div>
             )}
           </div>
@@ -464,28 +278,6 @@ export function CitasSection() {
             <Button type="button" variant="outline" onClick={() => setShowDialog(false)} disabled={saving}>Cancelar</Button>
             <Button type="button" onClick={handleGuardar} disabled={saving}>
               {saving ? "Guardando..." : "Guardar Cita"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog de Confirmación de Estatus */}
-      <Dialog open={!!confirmStatus} onOpenChange={(open) => !open && setConfirmStatus(null)}>
-        <DialogContent className="max-w-md rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>Confirmar cambio de estatus</DialogTitle>
-            <DialogDescription>
-              ¿Estás seguro que deseas marcar la cita de <strong>{confirmStatus?.name}</strong> como <span className="font-bold">{confirmStatus?.estatus}</span>?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-3 mt-4">
-            <Button variant="outline" onClick={() => setConfirmStatus(null)} disabled={updatingId !== null}>Cancelar</Button>
-            <Button 
-              variant={confirmStatus?.estatus === "Cancelada" ? "destructive" : "default"}
-              onClick={() => confirmStatus && handleUpdateEstatus(confirmStatus.id, confirmStatus.estatus)} 
-              disabled={updatingId !== null}
-            >
-              {updatingId !== null ? "Guardando..." : "Confirmar"}
             </Button>
           </div>
         </DialogContent>
